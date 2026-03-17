@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "ensure-admin": "ts-node-dev --transpile-only src/scripts/ensureAdminUser.ts",
+    "cleanup-wrong-admin": "ts-node-dev --transpile-only src/scripts/cleanupWrongAdminUser.ts",
+    "add-admin-to-all-bands": "ts-node-dev --transpile-only src/scripts/addAdminToAllBands.ts"
   },
   "keywords": [],
   "author": "",

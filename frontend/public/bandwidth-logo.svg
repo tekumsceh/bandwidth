@@ -1,0 +1,26 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bw-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#020617" />
+  <path
+    d="M10 40 C16 30, 24 26, 32 28 C40 30, 48 24, 54 18"
+    fill="none"
+    stroke="url(#bw-grad)"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
+  <path
+    d="M10 48 C16 38, 24 34, 32 36 C40 38, 48 32, 54 26"
+    fill="none"
+    stroke="#f97316"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+  <circle cx="18" cy="22" r="3" fill="#f97316" />
+  <circle cx="32" cy="18" r="3" fill="#38bdf8" />
+  <circle cx="46" cy="14" r="3" fill="#f97316" />
+</svg>
