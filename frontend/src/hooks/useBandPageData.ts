@@ -1,63 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
+import { apiUrl } from '../config/api';
+import type { BandDetail, BandLedgerEvent, BandLedgerMember, BandPagePayload } from '../types';
 
-type BandDetail = {
-  band: {
-    id: number;
-    name: string;
-    color: string | null;
-    is_solo: 0 | 1;
-  };
-  my_role: 'owner' | 'admin' | 'member';
+type BandPageQuery = {
+  timeline?: 'upcoming' | 'past' | 'all';
+  archive?: boolean;
 };
 
-type BandLedgerMember = {
-  user_id: number;
-  display_name: string;
-};
-
-type BandLedgerEvent = {
-  date_id: number;
-  event_date: string;
-  title: string | null;
-  band_paid_at: string | null;
-  expenses_eur: number;
-  members: {
-    user_id: number;
-    display_name: string;
-    allocated_eur: number;
-    paid_eur: number;
-  }[];
-};
-
-type BandPagePayload = {
-  detail: BandDetail;
-  myEvents: {
-    date_id: number;
-    band_id: number;
-    band_name: string;
-    event_date: string;
-    title: string | null;
-    venue_name: string | null;
-    city: string | null;
-    country: string | null;
-    status: string;
-    event_price: number | string;
-    currency: string;
-    allocated_eur: number | string;
-    paid_eur: number | string;
-  }[];
-  canSeeLedger: boolean;
-  ledgerEvents: BandLedgerEvent[];
-  ledgerMembers: BandLedgerMember[];
-};
-
-export function useBandPageData(bandId?: string) {
+export function useBandPageData(bandId?: string, query?: BandPageQuery) {
   const [detail, setDetail] = useState<BandDetail | null>(null);
   const [ledgerMembers, setLedgerMembers] = useState<BandLedgerMember[]>([]);
   const [ledgerEvents, setLedgerEvents] = useState<BandLedgerEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myEvents, setMyEvents] = useState<BandPagePayload['myEvents']>([]);
+  const [bandMembers, setBandMembers] = useState<BandPagePayload['bandMembers']>([]);
   const [canSeeLedger, setCanSeeLedger] = useState(false);
 
   const toErrorMessage = (err: unknown, fallback: string) =>
@@ -68,7 +25,11 @@ export function useBandPageData(bandId?: string) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:5000/api/pages/band/${bandId}`);
+      const params = new URLSearchParams();
+      if (query?.timeline) params.set('timeline', query.timeline);
+      if (query?.archive) params.set('archive', '1');
+      const querySuffix = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(apiUrl(`/api/pages/band/${bandId}${querySuffix}`));
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || `Failed to load band (${res.status})`);
@@ -76,6 +37,7 @@ export function useBandPageData(bandId?: string) {
       const payload = (await res.json()) as BandPagePayload;
       setDetail(payload.detail);
       setMyEvents(payload.myEvents || []);
+      setBandMembers(payload.bandMembers || []);
       setCanSeeLedger(Boolean(payload.canSeeLedger));
       setLedgerEvents(payload.ledgerEvents || []);
       setLedgerMembers(payload.ledgerMembers || []);
@@ -84,7 +46,7 @@ export function useBandPageData(bandId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [bandId]);
+  }, [bandId, query?.timeline, query?.archive]);
 
   useEffect(() => {
     refresh();
@@ -97,6 +59,7 @@ export function useBandPageData(bandId?: string) {
     loading,
     error,
     myEvents,
+    bandMembers,
     canSeeLedger,
     refresh,
   };

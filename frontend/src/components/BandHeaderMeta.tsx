@@ -1,3 +1,5 @@
+import BackNavLink from './BackNavLink';
+
 type Props = {
   activeTab: 'overview' | 'ledger';
   bandName: string;
@@ -7,6 +9,7 @@ function BandHeaderMeta({ activeTab, bandName }: Props) {
   return (
     <header className="page-header">
       <div>
+        <BackNavLink />
         <h1>
           {activeTab === 'overview' ? 'Band schedule' : 'Band ledger'} – {bandName}
         </h1>

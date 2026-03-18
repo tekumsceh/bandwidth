@@ -3,15 +3,23 @@ import { getEventDetail, getUserSchedule } from '../services/eventsService';
 import { getBandLedger, getUserLedger } from '../services/ledgerService';
 import { getBandSummary, getUserBands } from '../services/bandsService';
 import { pool } from '../db';
-import { canManageBandPlanning } from '../services/authzService';
+import { canManageBandPlanning, canViewBandDomain } from '../services/authzService';
 import { canEditByLifecyclePhase, getLifecyclePhase } from '../services/lifecycleService';
 
 const router = Router();
 
 type EventsPagePayload = {
+  contractVersion: string;
   schedule: any[];
   ledger: any[];
   bands: any[];
+  filters: {
+    view: string;
+    timeline: 'past' | 'upcoming' | 'all';
+    ledgerMode: string;
+    bandId: number | null;
+    archive: boolean;
+  };
   notifications: {
     pendingExpenses: number;
   };
@@ -28,7 +36,8 @@ router.get('/events', async (req: Request, res: Response) => {
     const timeline = String(req.query.timeline || 'upcoming').toLowerCase() as 'past' | 'upcoming' | 'all';
     const ledgerMode = String(req.query.ledgerMode || 'unpaid').toLowerCase();
     const archive = String(req.query.archive || '0') === '1';
-    const bandId = Number(req.query.band || NaN);
+    const bandRaw = req.query.bandId ?? req.query.band;
+    const bandId = Number(bandRaw || NaN);
     const limit = Number(req.query.limit || 300);
     const offset = Number(req.query.offset || 0);
 
@@ -93,9 +102,17 @@ router.get('/events', async (req: Request, res: Response) => {
     const pendingRow = ((pendingRows as any)[0] as any[])[0] || { pending_count: 0 };
 
     const payload: EventsPagePayload = {
+      contractVersion: 'pages.events.v1',
       schedule: schedule as any[],
       ledger: ledger as any[],
       bands: bands as any[],
+      filters: {
+        view,
+        timeline: resolvedTimeline,
+        ledgerMode: resolvedLedgerMode,
+        bandId: Number.isFinite(bandId) ? bandId : null,
+        archive: includeArchive,
+      },
       notifications: {
         pendingExpenses: Number(pendingRow.pending_count || 0),
       },
@@ -122,17 +139,8 @@ router.get('/event/:id', async (req: Request, res: Response) => {
     const event = await getEventDetail(dateId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const [accessRows] = await pool.query(
-      `SELECT 1
-       FROM dates d
-       JOIN band_members bm ON bm.band_id = d.band_id
-       WHERE d.id = ?
-         AND bm.user_id = ?
-         AND bm.status = 'active'
-       LIMIT 1`,
-      [dateId, currentUser.id],
-    );
-    if (!(accessRows as any[])[0]) {
+    const hasBandAccess = await canViewBandDomain(Number((event as any).band_id), currentUser.id);
+    if (!hasBandAccess) {
       return res.status(403).json({ error: 'You are not allowed to view this event' });
     }
 
@@ -215,6 +223,7 @@ router.get('/event/:id', async (req: Request, res: Response) => {
     }
 
     res.json({
+      contractVersion: 'pages.event.v1',
       event,
       lineup,
       finance: { totals, members: financeMembers },
@@ -248,21 +257,53 @@ router.get('/band/:id', async (req: Request, res: Response) => {
 
     const timeline = String(req.query.timeline || 'upcoming').toLowerCase();
     const archive = String(req.query.archive || '0') === '1';
-    const userLedger = (await getUserLedger(currentUser.id, {
-      bandId,
-      includeArchive: archive,
-      unpaidOnly: false,
-      limit: 500,
-      offset: 0,
-    })) as any[];
-    const myEvents = userLedger.filter((row) => Number(row.band_id) === bandId);
+    let where = `d.band_id = ?`;
+    const values: Array<number | string> = [currentUser.id, currentUser.id, bandId];
+    if (timeline === 'past') {
+      where += ' AND d.event_date < CURDATE()';
+    } else if (timeline === 'upcoming') {
+      where += ' AND d.event_date >= CURDATE()';
+    }
+    if (!archive) {
+      where += ` AND d.event_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)`;
+    }
+    const [myEventsRows] = await pool.query(
+      `SELECT
+         d.id AS date_id,
+         d.band_id,
+         b.name AS band_name,
+         d.event_date,
+         d.title,
+         d.venue_name,
+         d.city,
+         d.country,
+         d.status,
+         d.event_price,
+         d.currency,
+         COALESCE(SUM(CASE WHEN p.kind = 'member_allocation' AND p.user_id = ? THEN p.amount_eur ELSE 0 END), 0) AS allocated_eur,
+         COALESCE(SUM(CASE WHEN p.kind = 'member_paid' AND p.user_id = ? THEN p.amount_eur ELSE 0 END), 0) AS paid_eur
+       FROM dates d
+       JOIN bands b ON b.id = d.band_id
+       LEFT JOIN payments p ON p.date_id = d.id
+       WHERE ${where}
+       GROUP BY d.id, d.band_id, b.name, d.event_date, d.title, d.venue_name, d.city, d.country, d.status, d.event_price, d.currency
+       ORDER BY d.event_date ASC`,
+      values,
+    );
+    const myEvents = myEventsRows as any[];
 
-    const filteredMyEvents =
-      timeline === 'past'
-        ? myEvents.filter((row) => new Date(row.event_date) < new Date())
-        : timeline === 'upcoming'
-          ? myEvents.filter((row) => new Date(row.event_date) >= new Date())
-          : myEvents;
+    const [bandMembersRows] = await pool.query(
+      `SELECT
+         bm.user_id,
+         u.display_name,
+         bm.role
+       FROM band_members bm
+       JOIN users u ON u.id = bm.user_id
+       WHERE bm.band_id = ?
+         AND bm.status = 'active'
+       ORDER BY FIELD(bm.role, 'owner','admin','member','guest'), u.display_name`,
+      [bandId],
+    );
 
     let ledgerEvents: any[] = [];
     let ledgerMembers: any[] = [];
@@ -302,8 +343,10 @@ router.get('/band/:id', async (req: Request, res: Response) => {
     }
 
     res.json({
+      contractVersion: 'pages.band.v1',
       detail: { band, my_role: role },
-      myEvents: filteredMyEvents,
+      myEvents,
+      bandMembers: bandMembersRows,
       canSeeLedger: role === 'owner' || role === 'admin',
       ledgerEvents,
       ledgerMembers,

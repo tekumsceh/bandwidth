@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../db';
 import { getUserSchedule } from '../services/eventsService';
-import { canManageBandFinance, canManageBandPlanning } from '../services/authzService';
+import { canManageBandFinance, canManageBandPlanning, canViewBandDomain } from '../services/authzService';
 import { canEditByLifecyclePhase, getLifecyclePhase } from '../services/lifecycleService';
 
 const router = Router();
@@ -63,18 +63,8 @@ router.get('/:id/expenses/pending', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Check owner/admin
-    const [memberRows] = await pool.query(
-      `SELECT role
-       FROM band_members
-       WHERE band_id = ?
-         AND user_id = ?
-         AND status = 'active'
-       LIMIT 1`,
-      [date.band_id, currentUser.id],
-    );
-    const member = (memberRows as any[])[0] as { role: string } | undefined;
-    if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
+    const allowed = await canManageBandFinance(date.band_id, currentUser.id);
+    if (!allowed) {
       return res
         .status(403)
         .json({ error: 'Only band owner/admin can view pending expenses' });
@@ -120,7 +110,7 @@ router.post('/:id/expenses/:paymentId/approve', async (req: Request, res: Respon
 
     // Ensure payment belongs to this date and band
     const [rows] = await pool.query(
-      `SELECT p.id, p.date_id, d.band_id
+      `SELECT p.id, p.date_id, d.band_id, d.event_date, d.status
        FROM payments p
        JOIN dates d ON d.id = p.date_id
        WHERE p.id = ?
@@ -130,26 +120,23 @@ router.post('/:id/expenses/:paymentId/approve', async (req: Request, res: Respon
        LIMIT 1`,
       [paymentId, id],
     );
-    const row = (rows as any[])[0] as { id: number; date_id: number; band_id: number } | undefined;
+    const row = (rows as any[])[0] as
+      | { id: number; date_id: number; band_id: number; event_date: Date; status: string }
+      | undefined;
     if (!row) {
       return res.status(404).json({ error: 'Pending expense not found' });
     }
 
-    // Check owner/admin for that band
-    const [memberRows] = await pool.query(
-      `SELECT role
-       FROM band_members
-       WHERE band_id = ?
-         AND user_id = ?
-         AND status = 'active'
-       LIMIT 1`,
-      [row.band_id, currentUser.id],
-    );
-    const member = (memberRows as any[])[0] as { role: string } | undefined;
-    if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
+    const allowed = await canManageBandFinance(row.band_id, currentUser.id);
+    if (!allowed) {
       return res
         .status(403)
         .json({ error: 'Only band owner/admin can approve expenses' });
+    }
+
+    const phase = getLifecyclePhase({ event_date: row.event_date, status: row.status });
+    if (!canEditByLifecyclePhase(phase, 'expense')) {
+      return res.status(400).json({ error: 'Expense approval is locked for this event phase' });
     }
 
     await pool.query(
@@ -181,7 +168,7 @@ router.post('/:id/expenses/:paymentId/reject', async (req: Request, res: Respons
     }
 
     const [rows] = await pool.query(
-      `SELECT p.id, p.date_id, d.band_id
+      `SELECT p.id, p.date_id, d.band_id, d.event_date, d.status
        FROM payments p
        JOIN dates d ON d.id = p.date_id
        WHERE p.id = ?
@@ -191,25 +178,23 @@ router.post('/:id/expenses/:paymentId/reject', async (req: Request, res: Respons
        LIMIT 1`,
       [paymentId, id],
     );
-    const row = (rows as any[])[0] as { id: number; date_id: number; band_id: number } | undefined;
+    const row = (rows as any[])[0] as
+      | { id: number; date_id: number; band_id: number; event_date: Date; status: string }
+      | undefined;
     if (!row) {
       return res.status(404).json({ error: 'Pending expense not found' });
     }
 
-    const [memberRows] = await pool.query(
-      `SELECT role
-       FROM band_members
-       WHERE band_id = ?
-         AND user_id = ?
-         AND status = 'active'
-       LIMIT 1`,
-      [row.band_id, currentUser.id],
-    );
-    const member = (memberRows as any[])[0] as { role: string } | undefined;
-    if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
+    const allowed = await canManageBandFinance(row.band_id, currentUser.id);
+    if (!allowed) {
       return res
         .status(403)
         .json({ error: 'Only band owner/admin can reject expenses' });
+    }
+
+    const phase = getLifecyclePhase({ event_date: row.event_date, status: row.status });
+    if (!canEditByLifecyclePhase(phase, 'expense')) {
+      return res.status(400).json({ error: 'Expense rejection is locked for this event phase' });
     }
 
     await pool.query(
@@ -241,31 +226,28 @@ router.post('/:id/band-paid', async (req: Request, res: Response) => {
     }
 
     const [dateRows] = await pool.query(
-      `SELECT d.id, d.band_id
+      `SELECT d.id, d.band_id, d.event_date, d.status
        FROM dates d
        WHERE d.id = ?`,
       [id],
     );
-    const date = (dateRows as any[])[0] as { id: number; band_id: number } | undefined;
+    const date = (dateRows as any[])[0] as
+      | { id: number; band_id: number; event_date: Date; status: string }
+      | undefined;
     if (!date) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Only owner/admin of this band can mark as paid
-    const [memberRows] = await pool.query(
-      `SELECT role
-       FROM band_members
-       WHERE band_id = ?
-         AND user_id = ?
-         AND status = 'active'
-       LIMIT 1`,
-      [date.band_id, currentUser.id],
-    );
-    const member = (memberRows as any[])[0] as { role: string } | undefined;
-    if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
+    const allowed = await canManageBandFinance(date.band_id, currentUser.id);
+    if (!allowed) {
       return res
         .status(403)
         .json({ error: 'Only band owner/admin can mark date as paid' });
+    }
+
+    const phase = getLifecyclePhase({ event_date: date.event_date, status: date.status });
+    if (!canEditByLifecyclePhase(phase, 'member_paid')) {
+      return res.status(400).json({ error: 'Band paid marker is locked for this event phase' });
     }
 
     await pool.query(
@@ -295,6 +277,22 @@ router.post('/:id/member-paid', async (req: Request, res: Response) => {
     const currentUser = (req as any).user;
     if (!currentUser) {
       return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const [dateRows] = await pool.query(
+      `SELECT d.id, d.event_date, d.status
+       FROM dates d
+       WHERE d.id = ?
+       LIMIT 1`,
+      [id],
+    );
+    const date = (dateRows as any[])[0] as { id: number; event_date: Date; status: string } | undefined;
+    if (!date) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    const phase = getLifecyclePhase({ event_date: date.event_date, status: date.status });
+    if (!canEditByLifecyclePhase(phase, 'member_paid')) {
+      return res.status(400).json({ error: 'Member paid marker is locked for this event phase' });
     }
 
     // Ensure current user is in lineup for this date
@@ -673,18 +671,12 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // Ensure current user can see this event (is member of the band)
-    const [accessRows] = await pool.query(
-      `SELECT 1
-       FROM dates d
-       JOIN band_members bm ON bm.band_id = d.band_id
-       WHERE d.id = ?
-         AND bm.user_id = ?
-         AND bm.status = 'active'
-       LIMIT 1`,
-      [id, currentUser.id],
-    );
-    const hasAccess = (accessRows as any[])[0];
+    const [bandRows] = await pool.query(`SELECT band_id FROM dates WHERE id = ? LIMIT 1`, [id]);
+    const bandRow = (bandRows as any[])[0] as { band_id: number } | undefined;
+    if (!bandRow) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    const hasAccess = await canViewBandDomain(Number(bandRow.band_id), currentUser.id);
     if (!hasAccess) {
       return res.status(403).json({ error: 'You are not allowed to view this event' });
     }
@@ -723,18 +715,12 @@ router.get('/:id/members', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // Ensure current user can see this event (is member of the band)
-    const [accessRows] = await pool.query(
-      `SELECT 1
-       FROM dates d
-       JOIN band_members bm ON bm.band_id = d.band_id
-       WHERE d.id = ?
-         AND bm.user_id = ?
-         AND bm.status = 'active'
-       LIMIT 1`,
-      [id, currentUser.id],
-    );
-    const hasAccess = (accessRows as any[])[0];
+    const [bandRows] = await pool.query(`SELECT band_id FROM dates WHERE id = ? LIMIT 1`, [id]);
+    const bandRow = (bandRows as any[])[0] as { band_id: number } | undefined;
+    if (!bandRow) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    const hasAccess = await canViewBandDomain(Number(bandRow.band_id), currentUser.id);
     if (!hasAccess) {
       return res.status(403).json({ error: 'You are not allowed to view this event' });
     }
@@ -775,18 +761,12 @@ router.get('/:id/finance', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // Ensure current user can see this event (is member of the band)
-    const [accessRows] = await pool.query(
-      `SELECT 1
-       FROM dates d
-       JOIN band_members bm ON bm.band_id = d.band_id
-       WHERE d.id = ?
-         AND bm.user_id = ?
-         AND bm.status = 'active'
-       LIMIT 1`,
-      [id, currentUser.id],
-    );
-    const hasAccess = (accessRows as any[])[0];
+    const [bandRows] = await pool.query(`SELECT band_id FROM dates WHERE id = ? LIMIT 1`, [id]);
+    const bandRow = (bandRows as any[])[0] as { band_id: number } | undefined;
+    if (!bandRow) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    const hasAccess = await canViewBandDomain(Number(bandRow.band_id), currentUser.id);
     if (!hasAccess) {
       return res.status(403).json({ error: 'You are not allowed to view this event' });
     }

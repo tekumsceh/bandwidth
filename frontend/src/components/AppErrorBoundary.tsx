@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { apiUrl } from '../config/api';
 
 type Props = {
   children: ReactNode;
@@ -17,7 +18,7 @@ class AppErrorBoundary extends Component<Props, State> {
 
   async componentDidCatch(error: Error, info: ErrorInfo) {
     try {
-      await fetch('http://localhost:5000/api/logs/client', {
+      await fetch(apiUrl('/api/logs/client'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -4,7 +4,72 @@ export async function ensureV2Schema() {
   await pool.query(
     `ALTER TABLE users
       ADD COLUMN IF NOT EXISTS default_currency CHAR(3) NOT NULL DEFAULT 'EUR',
-      ADD COLUMN IF NOT EXISTS local_currency CHAR(3) NOT NULL DEFAULT 'EUR'`,
+      ADD COLUMN IF NOT EXISTS local_currency CHAR(3) NOT NULL DEFAULT 'EUR',
+      ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS email_verified_at DATETIME DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS auth_provider ENUM('google','password','hybrid') NOT NULL DEFAULT 'password'`,
+  );
+
+  await pool.query(
+    `UPDATE users
+     SET auth_provider =
+       CASE
+         WHEN google_id IS NOT NULL AND password_hash IS NOT NULL THEN 'hybrid'
+         WHEN google_id IS NOT NULL THEN 'google'
+         ELSE 'password'
+       END`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS user_sessions (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      session_id VARCHAR(128) NOT NULL,
+      user_id INT(10) UNSIGNED NOT NULL,
+      ip_address VARCHAR(64) DEFAULT NULL,
+      user_agent VARCHAR(255) DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      expires_at DATETIME NOT NULL,
+      revoked_at DATETIME DEFAULT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_user_sessions_sid (session_id),
+      KEY idx_user_sessions_user (user_id),
+      KEY idx_user_sessions_expiry (expires_at),
+      CONSTRAINT fk_user_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id INT(10) UNSIGNED NOT NULL,
+      token_hash CHAR(64) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used_at DATETIME DEFAULT NULL,
+      request_ip VARCHAR(64) DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_password_reset_token_hash (token_hash),
+      KEY idx_password_reset_user (user_id),
+      KEY idx_password_reset_expires (expires_at),
+      CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS email_verification_tokens (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id INT(10) UNSIGNED NOT NULL,
+      token_hash CHAR(64) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used_at DATETIME DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_email_verify_token_hash (token_hash),
+      KEY idx_email_verify_user (user_id),
+      KEY idx_email_verify_expires (expires_at),
+      CONSTRAINT fk_email_verify_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
   );
 
   await pool.query(
@@ -117,6 +182,89 @@ export async function ensureV2Schema() {
   );
 
   await pool.query(
+    `CREATE TABLE IF NOT EXISTS asset_profiles (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      module_key ENUM('gear','setlist','patch') NOT NULL,
+      scope ENUM('personal','band') NOT NULL,
+      owner_user_id INT(10) UNSIGNED DEFAULT NULL,
+      band_id INT(10) UNSIGNED DEFAULT NULL,
+      name VARCHAR(160) NOT NULL,
+      is_default TINYINT(1) NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      KEY idx_asset_profiles_module_scope (module_key, scope),
+      KEY idx_asset_profiles_band (band_id),
+      KEY idx_asset_profiles_owner (owner_user_id),
+      CONSTRAINT fk_asset_profiles_band FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE,
+      CONSTRAINT fk_asset_profiles_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS asset_profile_items (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      profile_id BIGINT UNSIGNED NOT NULL,
+      item_key VARCHAR(120) NOT NULL,
+      label VARCHAR(255) NOT NULL,
+      category VARCHAR(120) DEFAULT NULL,
+      qty DECIMAL(10,2) NOT NULL DEFAULT 1,
+      notes TEXT DEFAULT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      KEY idx_asset_profile_items_profile (profile_id),
+      KEY idx_asset_profile_items_item (item_key),
+      CONSTRAINT fk_asset_profile_items_profile FOREIGN KEY (profile_id) REFERENCES asset_profiles(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS asset_profile_links (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      module_key ENUM('gear','setlist','patch') NOT NULL,
+      band_id INT(10) UNSIGNED NOT NULL,
+      user_id INT(10) UNSIGNED NOT NULL,
+      profile_id BIGINT UNSIGNED NOT NULL,
+      is_default_for_band TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_asset_profile_links_unique (module_key, band_id, user_id, profile_id),
+      KEY idx_asset_profile_links_band (band_id),
+      KEY idx_asset_profile_links_user (user_id),
+      CONSTRAINT fk_asset_profile_links_band FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE,
+      CONSTRAINT fk_asset_profile_links_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CONSTRAINT fk_asset_profile_links_profile FOREIGN KEY (profile_id) REFERENCES asset_profiles(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS date_asset_snapshots (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      date_id INT(10) UNSIGNED NOT NULL,
+      band_id INT(10) UNSIGNED NOT NULL,
+      module_key ENUM('gear','setlist','patch') NOT NULL,
+      source_profile_id BIGINT UNSIGNED NOT NULL,
+      item_key VARCHAR(120) NOT NULL,
+      label VARCHAR(255) NOT NULL,
+      category VARCHAR(120) DEFAULT NULL,
+      qty DECIMAL(10,2) NOT NULL DEFAULT 1,
+      notes TEXT DEFAULT NULL,
+      created_by_user_id INT(10) UNSIGNED NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      KEY idx_date_asset_snapshots_date_module (date_id, module_key),
+      CONSTRAINT fk_date_asset_snapshots_date FOREIGN KEY (date_id) REFERENCES dates(id) ON DELETE CASCADE,
+      CONSTRAINT fk_date_asset_snapshots_band FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE,
+      CONSTRAINT fk_date_asset_snapshots_profile FOREIGN KEY (source_profile_id) REFERENCES asset_profiles(id) ON DELETE CASCADE,
+      CONSTRAINT fk_date_asset_snapshots_user FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
+
+  await pool.query(
     `INSERT IGNORE INTO page_listing_config (page_key, default_view, default_timeline, default_ledger_mode, archive_enabled)
      VALUES
        ('events', 'schedule', 'upcoming', 'unpaid', 1),
@@ -130,6 +278,24 @@ export async function ensureV2Schema() {
        ('events', 'timeline', 1, 'upcoming', 1, '["upcoming","past","all"]'),
        ('events', 'band', 1, 'all', 2, '[]'),
        ('events', 'ledgerMode', 1, 'unpaid', 3, '["unpaid","all"]')`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS io_patch_saves (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      band_id INT(10) UNSIGNED NOT NULL,
+      created_by_user_id INT(10) UNSIGNED NOT NULL,
+      name VARCHAR(160) NOT NULL,
+      is_default TINYINT(1) NOT NULL DEFAULT 0,
+      data_json LONGTEXT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      KEY idx_io_patch_saves_band (band_id),
+      KEY idx_io_patch_saves_default (band_id, is_default),
+      CONSTRAINT fk_io_patch_saves_band FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE,
+      CONSTRAINT fk_io_patch_saves_user FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
   );
 }
 

@@ -7,23 +7,25 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const crypto_1 = require("crypto");
+const auth_1 = __importDefault(require("./routes/auth"));
 const bands_1 = __importDefault(require("./routes/bands"));
 const dates_1 = __importDefault(require("./routes/dates"));
 const me_1 = __importDefault(require("./routes/me"));
 const pages_1 = __importDefault(require("./routes/pages"));
 const adminConfig_1 = __importDefault(require("./routes/adminConfig"));
 const interventions_1 = __importDefault(require("./routes/interventions"));
-const db_1 = require("./db");
+const assets_1 = __importDefault(require("./routes/assets"));
 const schemaService_1 = require("./services/schemaService");
-const authzService_1 = require("./services/authzService");
+const sessionAuth_1 = require("./middleware/sessionAuth");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
 app.use((0, cors_1.default)({
     origin: 'http://localhost:5173',
-    credentials: false,
+    credentials: true,
 }));
 app.use(express_1.default.json());
+app.use(sessionAuth_1.attachSessionUser);
 app.use((req, res, next) => {
     const reqId = (0, crypto_1.randomUUID)();
     const startedAt = Date.now();
@@ -45,49 +47,11 @@ app.use((req, res, next) => {
     });
     next();
 });
-// Simple "current user" middleware for development:
-// Treats ADMIN_EMAIL from .env as the logged-in user and attaches it to req.user.
-// In a real setup this will be replaced by proper Google OAuth/session handling.
-app.use(async (req, res, next) => {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (!adminEmail) {
-        return res
-            .status(500)
-            .json({ error: 'ADMIN_EMAIL not configured in .env – cannot determine current user.' });
-    }
-    try {
-        const [rows] = await db_1.pool.query(`SELECT id, email, display_name, role, default_currency, local_currency
-       FROM users
-       WHERE email = ?
-       LIMIT 1`, [adminEmail]);
-        const userRow = rows[0];
-        if (!userRow) {
-            return res.status(401).json({
-                error: 'Current user not found in database. Run the seed script or create a user for ADMIN_EMAIL.',
-            });
-        }
-        // Attach to request for downstream routes
-        req.user = {
-            id: userRow.id,
-            email: userRow.email,
-            displayName: userRow.display_name,
-            role: userRow.role,
-            defaultCurrency: userRow.default_currency || 'EUR',
-            localCurrency: userRow.local_currency || 'EUR',
-        };
-        await (0, authzService_1.ensureSoloBandAdmin)(userRow.id);
-        next();
-    }
-    catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Error loading current user', err);
-        return res.status(500).json({ error: 'Failed to load current user' });
-    }
-});
 // Health without user context is fine, but it will still run after user is attached.
 app.get('/api/health', (_req, res) => {
     res.json({ ok: true, message: 'Bandwidth backend is running.' });
 });
+app.use('/api/auth', auth_1.default);
 // Basic current-user endpoint for the frontend
 app.get('/api/me', (req, res) => {
     const user = req.user;
@@ -120,6 +84,7 @@ app.use('/api/me', me_1.default);
 app.use('/api/pages', pages_1.default);
 app.use('/api/admin/config', adminConfig_1.default);
 app.use('/api/interventions', interventions_1.default);
+app.use('/api/assets', assets_1.default);
 app.use((err, req, res, _next) => {
     // eslint-disable-next-line no-console
     console.error(JSON.stringify({

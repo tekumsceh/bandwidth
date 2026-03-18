@@ -7,6 +7,30 @@ export type AuthUser = {
   role: string;
 };
 
+export function resolveGodBandOverride(env: NodeJS.ProcessEnv = process.env) {
+  const raw = String(env.GOD_BAND_OVERRIDE ?? '').trim().toLowerCase();
+  if (raw === '1' || raw === 'true' || raw === 'yes') return true;
+  if (raw === '0' || raw === 'false' || raw === 'no') return false;
+  // Development default: GOD can override band-domain checks.
+  return env.NODE_ENV !== 'production';
+}
+
+export function isBandManagerRole(role: unknown) {
+  return String(role || '') === 'owner' || String(role || '') === 'admin';
+}
+
+async function isGodUser(userId: number) {
+  const [rows] = await pool.query(
+    `SELECT role
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [userId],
+  );
+  const row = (rows as any[])[0] as { role?: string } | undefined;
+  return String(row?.role || '') === 'GOD';
+}
+
 export async function getBandRoleForUser(bandId: number, userId: number) {
   const [rows] = await pool.query(
     `SELECT role
@@ -19,6 +43,11 @@ export async function getBandRoleForUser(bandId: number, userId: number) {
   );
   const row = (rows as any[])[0] as { role: string } | undefined;
   return row?.role ?? null;
+}
+
+export async function isActiveBandMember(bandId: number, userId: number) {
+  const role = await getBandRoleForUser(bandId, userId);
+  return Boolean(role);
 }
 
 export async function ensureSoloBandAdmin(userId: number) {
@@ -48,13 +77,20 @@ export async function ensureSoloBandAdmin(userId: number) {
 }
 
 export async function canManageBandPlanning(bandId: number, userId: number) {
+  if (resolveGodBandOverride() && (await isGodUser(userId))) return true;
   const role = await getBandRoleForUser(bandId, userId);
-  return role === 'owner' || role === 'admin';
+  return isBandManagerRole(role);
 }
 
 export async function canManageBandFinance(bandId: number, userId: number) {
+  if (resolveGodBandOverride() && (await isGodUser(userId))) return true;
   const role = await getBandRoleForUser(bandId, userId);
-  return role === 'owner' || role === 'admin';
+  return isBandManagerRole(role);
+}
+
+export async function canViewBandDomain(bandId: number, userId: number) {
+  if (resolveGodBandOverride() && (await isGodUser(userId))) return true;
+  return isActiveBandMember(bandId, userId);
 }
 
 export async function canConfigureApp(user: AuthUser) {

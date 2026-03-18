@@ -4,9 +4,22 @@ import './index.css';
 import 'react-datepicker/dist/react-datepicker.css';
 import App from './App.tsx';
 import AppErrorBoundary from './components/AppErrorBoundary.tsx';
+import { API_BASE_URL, apiUrl } from './config/api';
+
+const nativeFetch = window.fetch.bind(window);
+window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  const isBackend = url.startsWith(API_BASE_URL);
+  if (!isBackend) return nativeFetch(input, init);
+  const nextInit: RequestInit = {
+    ...(init || {}),
+    credentials: init?.credentials || 'include',
+  };
+  return nativeFetch(input, nextInit);
+}) as typeof window.fetch;
 
 window.addEventListener('error', (event) => {
-  void fetch('http://localhost:5000/api/logs/client', {
+  void fetch(apiUrl('/api/logs/client'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -23,7 +36,7 @@ window.addEventListener('error', (event) => {
 
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason as { message?: string; stack?: string } | undefined;
-  void fetch('http://localhost:5000/api/logs/client', {
+  void fetch(apiUrl('/api/logs/client'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

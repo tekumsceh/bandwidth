@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import BackNavLink from '../components/BackNavLink';
+import { apiUrl } from '../config/api';
 
 type CurrencyPrefPayload = {
   default_currency: string;
@@ -30,7 +32,7 @@ function Settings() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('http://localhost:5000/api/me/preferences/currency');
+        const res = await fetch(apiUrl('/api/me/preferences/currency'));
         const json = (await res.json()) as CurrencyPrefPayload;
         if (!res.ok) {
           throw new Error((json as any)?.error || `Failed to load settings (${res.status})`);
@@ -54,7 +56,7 @@ function Settings() {
     setError(null);
     setStatus(null);
     try {
-      const res = await fetch('http://localhost:5000/api/me/preferences/currency', {
+      const res = await fetch(apiUrl('/api/me/preferences/currency'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,6 +78,7 @@ function Settings() {
     <div className="page">
       <div className="page-header">
         <div>
+          <BackNavLink />
           <h1>Settings</h1>
           <p className="page-header-sub">Choose your default and local currencies.</p>
         </div>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
+import { apiUrl } from '../config/api';
 import EventInfoSection from '../components/EventInfoSection';
 import MyDateLedgerSection from '../components/MyDateLedgerSection';
 import BandLedgerSection from '../components/BandLedgerSection';
@@ -99,7 +100,7 @@ function EventDetail() {
     if (!id) return;
     setSavingEdit(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/dates/${id}`, {
+      const res = await fetch(apiUrl(`/api/dates/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -126,7 +127,7 @@ function EventDetail() {
         amount_eur: Number(incomingAmount),
         label: incomingLabel || 'Incoming',
       };
-      const res = await fetch(`http://localhost:5000/api/dates/${id}/payments`, {
+      const res = await fetch(apiUrl(`/api/dates/${id}/payments`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -154,7 +155,7 @@ function EventDetail() {
         amount_eur: Number(expenseAmount),
         label: expenseLabel || 'Expense',
       };
-      const res = await fetch(`http://localhost:5000/api/dates/${id}/payments`, {
+      const res = await fetch(apiUrl(`/api/dates/${id}/payments`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -181,7 +182,7 @@ function EventDetail() {
         kind: 'member_paid',
         amount_eur: Number(myPaidAmount),
       };
-      const res = await fetch(`http://localhost:5000/api/dates/${id}/payments`, {
+      const res = await fetch(apiUrl(`/api/dates/${id}/payments`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -202,7 +203,7 @@ function EventDetail() {
   const handleBandPaid = async () => {
     if (!id) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/dates/${id}/band-paid`, {
+      const res = await fetch(apiUrl(`/api/dates/${id}/band-paid`), {
         method: 'POST',
       });
       if (!res.ok) {
@@ -218,7 +219,7 @@ function EventDetail() {
   const handleMemberPaidFlag = async () => {
     if (!id) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/dates/${id}/member-paid`, {
+      const res = await fetch(apiUrl(`/api/dates/${id}/member-paid`), {
         method: 'POST',
       });
       if (!res.ok) {
@@ -235,7 +236,7 @@ function EventDetail() {
     if (!id) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/dates/${id}/expenses/${paymentId}/approve`,
+        apiUrl(`/api/dates/${id}/expenses/${paymentId}/approve`),
         { method: 'POST' },
       );
       if (!res.ok) {
@@ -252,7 +253,7 @@ function EventDetail() {
     if (!id) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/dates/${id}/expenses/${paymentId}/reject`,
+        apiUrl(`/api/dates/${id}/expenses/${paymentId}/reject`),
         { method: 'POST' },
       );
       if (!res.ok) {

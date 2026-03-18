@@ -1,6 +1,8 @@
 import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackNavLink from '../components/BackNavLink';
+import { apiUrl } from '../config/api';
 
 type Band = {
   id: number;
@@ -45,7 +47,7 @@ function CreateEvent() {
       setLoadingBands(true);
       setError(null);
       try {
-        const res = await fetch('http://localhost:5000/api/bands');
+        const res = await fetch(apiUrl('/api/bands'));
         if (!res.ok) throw new Error(`Failed to load bands (${res.status})`);
         const json = await res.json();
         setBands(json);
@@ -73,9 +75,9 @@ function CreateEvent() {
       const ok = window.confirm(
         'You have started filling in this show. If you go back now, changes will be lost. Continue?',
       );
-      if (!ok) return;
+      if (!ok) return false;
     }
-    navigate(-1);
+    return true;
   };
 
   const handleSubmit = async (e: FormEvent, goToFinance: boolean) => {
@@ -92,7 +94,7 @@ function CreateEvent() {
         band_id: Number(form.band_id),
         event_price: form.event_price ? Number(form.event_price) : 0,
       };
-      const res = await fetch('http://localhost:5000/api/dates', {
+      const res = await fetch(apiUrl('/api/dates'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -118,13 +120,7 @@ function CreateEvent() {
           <div className="page-header-sub">Fill in what, when, where and who.</div>
         </div>
         <div className="page-header-meta">
-          <button
-            type="button"
-            className="btn btn-action btn-secondary"
-            onClick={handleBack}
-          >
-            ← Back
-          </button>
+          <BackNavLink className="back-nav-link" onBeforeBack={handleBack} />
         </div>
       </header>
 

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { pool } from '../db';
 import { getUserBands, getBandSummary } from '../services/bandsService';
 import { getBandLedger } from '../services/ledgerService';
+import { canManageBandFinance, canManageBandPlanning } from '../services/authzService';
 
 const router = Router();
 
@@ -30,20 +31,31 @@ router.post('/make-me-admin', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    // RBAC hardening:
+    // never allow users to self-escalate privileges in band domain.
+    if (currentUser.role !== 'GOD') {
+      return res.status(403).json({ error: 'Self role escalation is not allowed' });
+    }
+
+    const targetUserId = Number(req.body?.user_id);
+    if (!Number.isFinite(targetUserId)) {
+      return res.status(400).json({ error: 'user_id is required for privileged role updates' });
+    }
+
     const [result] = await pool.query(
       `UPDATE band_members
        SET role = 'admin', updated_at = NOW()
        WHERE user_id = ?
          AND status = 'active'
          AND role = 'member'`,
-      [currentUser.id],
+      [targetUserId],
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const info = result as any;
     return res.json({
       updated: info.affectedRows ?? 0,
-      message: 'You are now admin on all bands you were a member of.',
+      message: 'Target user is now admin on bands where they were a member.',
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -126,17 +138,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     // Check permissions
-    const [permRows] = await pool.query(
-      `SELECT role
-       FROM band_members
-       WHERE band_id = ?
-         AND user_id = ?
-         AND status = 'active'
-       LIMIT 1`,
-      [id, currentUser.id],
-    );
-    const perm = (permRows as any[])[0];
-    if (!perm || (perm.role !== 'owner' && perm.role !== 'admin')) {
+    const allowed = await canManageBandPlanning(id, currentUser.id);
+    if (!allowed) {
       return res.status(403).json({ error: 'You are not allowed to manage this band' });
     }
 
@@ -189,17 +192,8 @@ router.patch('/:id', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const [permRows] = await pool.query(
-      `SELECT role
-       FROM band_members
-       WHERE band_id = ?
-         AND user_id = ?
-         AND status = 'active'
-       LIMIT 1`,
-      [id, currentUser.id],
-    );
-    const perm = (permRows as any[])[0];
-    if (!perm || (perm.role !== 'owner' && perm.role !== 'admin')) {
+    const allowed = await canManageBandPlanning(id, currentUser.id);
+    if (!allowed) {
       return res.status(403).json({ error: 'You are not allowed to update this band' });
     }
 
@@ -241,8 +235,8 @@ router.get('/:id/events', async (req: Request, res: Response) => {
     }
 
     // Check permissions (owner/admin only)
-    const { role } = await getBandSummary(id, currentUser.id);
-    if (!role || (role !== 'owner' && role !== 'admin')) {
+    const allowed = await canManageBandFinance(id, currentUser.id);
+    if (!allowed) {
       return res.status(403).json({ error: 'You are not allowed to view this band ledger' });
     }
 

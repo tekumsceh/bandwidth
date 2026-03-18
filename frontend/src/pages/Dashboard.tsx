@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { apiUrl } from '../config/api';
 import EventsHeaderShell from '../components/EventsHeaderShell';
 import EventsToolbar from '../components/EventsToolbar';
 import ScheduleList from '../components/ScheduleList';
 import MyLedgerView from '../components/MyLedgerView';
 import { useEventsPageData } from '../hooks/useEventsPageData';
-import { useEventsViewState } from '../hooks/useEventsViewState';
 
 function Dashboard() {
   const {
@@ -19,34 +19,75 @@ function Dashboard() {
     refresh,
     refreshLedger,
   } = useEventsPageData();
-  const {
-    activeTab,
-    setActiveTab,
-    filter,
-    setFilter,
-    bandFilter,
-    setBandFilter,
-    ledgerBandFilter,
-    setLedgerBandFilter,
-    ledgerMode,
-    setLedgerMode,
-    bulkPayAmount,
-    setBulkPayAmount,
-    bulkPayStatus,
-    setBulkPayStatus,
-    openMenu,
-    setOpenMenu,
-    menuCloseTimer,
-    setMenuCloseTimer,
-  } = useEventsViewState();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [bulkPayAmount, setBulkPayAmount] = useState('');
+  const [bulkPayStatus, setBulkPayStatus] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<'view' | 'timeline' | 'band' | null>(null);
   const [displayCurrency, setDisplayCurrency] = useState('EUR');
   const [eurToDisplayRate, setEurToDisplayRate] = useState(1);
+
+  const activeTab = (searchParams.get('view') || 'schedule').toLowerCase() === 'ledger' ? 'ledger' : 'schedule';
+  const filterRaw = (searchParams.get('timeline') || 'upcoming').toLowerCase();
+  const filter: 'upcoming' | 'past' | 'all' =
+    filterRaw === 'past' || filterRaw === 'all' ? filterRaw : 'upcoming';
+  const ledgerModeRaw = (searchParams.get('ledgerMode') || 'unpaid').toLowerCase();
+  const ledgerMode: 'unpaid' | 'all' = ledgerModeRaw === 'all' ? 'all' : 'unpaid';
+  const bandRaw = searchParams.get('bandId') || searchParams.get('band');
+  const bandNum = Number(bandRaw || NaN);
+  const bandFilter: 'all' | number = Number.isFinite(bandNum) ? bandNum : 'all';
+  const ledgerBandFilter: 'all' | number = bandFilter;
+  const archive = (searchParams.get('archive') || '0') === '1';
+
+  const updateQuery = (
+    patch: Partial<Record<'view' | 'timeline' | 'bandId' | 'band' | 'ledgerMode' | 'archive', string | null>>,
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null || value === '') next.delete(key);
+      else next.set(key, value);
+    }
+    setSearchParams(next, { replace: false });
+  };
+
+  const setActiveTab = (tab: 'schedule' | 'ledger') => updateQuery({ view: tab });
+  const setFilter = (next: 'upcoming' | 'past' | 'all') => updateQuery({ timeline: next });
+  const setBandFilter = (next: 'all' | number) =>
+    updateQuery({
+      bandId: next === 'all' ? null : String(next),
+      band: null,
+    });
+  const setLedgerBandFilter = setBandFilter;
+  const setLedgerMode = (next: 'unpaid' | 'all') => updateQuery({ ledgerMode: next });
+
+  useEffect(() => {
+    const normalized = new URLSearchParams(searchParams);
+    let dirty = false;
+    if (!normalized.get('view')) {
+      normalized.set('view', activeTab);
+      dirty = true;
+    }
+    if (!normalized.get('timeline')) {
+      normalized.set('timeline', filter);
+      dirty = true;
+    }
+    if (!normalized.get('ledgerMode')) {
+      normalized.set('ledgerMode', ledgerMode);
+      dirty = true;
+    }
+    if (!normalized.get('archive')) {
+      normalized.set('archive', archive ? '1' : '0');
+      dirty = true;
+    }
+    if (dirty) {
+      setSearchParams(normalized, { replace: true });
+    }
+  }, [activeTab, filter, ledgerMode, archive, searchParams, setSearchParams]);
 
   useEffect(() => {
     const loadCurrencyContext = async () => {
       try {
-        const prefRes = await fetch('http://localhost:5000/api/me/preferences/currency');
+        const prefRes = await fetch(apiUrl('/api/me/preferences/currency'));
         const prefJson = (await prefRes.json()) as {
           default_currency?: string;
           local_currency?: string;
@@ -56,7 +97,7 @@ function Dashboard() {
         const target = String(prefJson.default_currency || 'EUR').toUpperCase();
         setDisplayCurrency(target);
 
-        const fxRes = await fetch(`http://localhost:5000/api/me/fx?base=EUR&symbols=${encodeURIComponent(target)}`);
+        const fxRes = await fetch(apiUrl(`/api/me/fx?base=EUR&symbols=${encodeURIComponent(target)}`));
         const fxJson = (await fxRes.json()) as { rates?: Record<string, number> };
         if (!fxRes.ok) return;
         const rate = Number(fxJson?.rates?.[target] ?? 1);
@@ -73,14 +114,16 @@ function Dashboard() {
         view: 'schedule',
         timeline: filter,
         band: bandFilter,
+        archive,
       });
     } else {
       void refreshLedger({
         band: ledgerBandFilter,
         ledgerMode,
+        archive,
       });
     }
-  }, [activeTab, filter, bandFilter, ledgerBandFilter, ledgerMode, refresh, refreshLedger]);
+  }, [activeTab, filter, bandFilter, ledgerBandFilter, ledgerMode, archive, refresh, refreshLedger]);
 
   const toErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error ? err.message : fallback;
@@ -214,7 +257,7 @@ function Dashboard() {
   const handlePayDate = async (dateId: number) => {
     try {
       setBulkPayStatus(null);
-      const res = await fetch(`http://localhost:5000/api/me/pay/date/${dateId}`, {
+      const res = await fetch(apiUrl(`/api/me/pay/date/${dateId}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -237,7 +280,7 @@ function Dashboard() {
     }
     try {
       setBulkPayStatus(null);
-      const res = await fetch('http://localhost:5000/api/me/pay/bulk', {
+      const res = await fetch(apiUrl('/api/me/pay/bulk'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: amt }),
@@ -262,7 +305,7 @@ function Dashboard() {
 
   return (
     <div className="page">
-      <EventsHeaderShell title={activeTab === 'schedule' ? 'Schedule' : 'My ledger'}>
+      <EventsHeaderShell title={activeTab === 'schedule' ? 'Schedule' : 'My ledger'} showBack={false}>
         <EventsToolbar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -273,8 +316,6 @@ function Dashboard() {
           bandOptions={timelineBandOptions}
           openMenu={openMenu}
           setOpenMenu={setOpenMenu}
-          menuCloseTimer={menuCloseTimer}
-          setMenuCloseTimer={setMenuCloseTimer}
         />
       </EventsHeaderShell>
 
@@ -351,7 +392,7 @@ function QuickCreateInline({ bands, onCreated }: QuickCreateProps) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:5000/api/dates/quick', {
+      const res = await fetch(apiUrl('/api/dates/quick'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ band_id: Number(bandId), event_date: date }),

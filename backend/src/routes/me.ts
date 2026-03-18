@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { pool } from '../db';
 import { getUserLedger } from '../services/ledgerService';
 import { getFxRatesFromBase } from '../services/fxService';
+import { canEditByLifecyclePhase, getLifecyclePhase } from '../services/lifecycleService';
 
 const router = Router();
 const SUPPORTED_CURRENCIES = [
@@ -221,6 +222,28 @@ router.post('/pay/date/:id', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    const [dateRows] = await pool.query(
+      `SELECT d.id, d.event_date, d.status
+       FROM dates d
+       JOIN band_members bm
+         ON bm.band_id = d.band_id
+        AND bm.user_id = ?
+        AND bm.status = 'active'
+       WHERE d.id = ?
+       LIMIT 1`,
+      [currentUser.id, dateId],
+    );
+    const dateRow = (dateRows as any[])[0] as
+      | { id: number; event_date: Date; status: string }
+      | undefined;
+    if (!dateRow) {
+      return res.status(403).json({ error: 'You are not allowed to pay this date' });
+    }
+    const phase = getLifecyclePhase({ event_date: dateRow.event_date, status: dateRow.status });
+    if (!canEditByLifecyclePhase(phase, 'member_paid')) {
+      return res.status(400).json({ error: 'Date is locked for payout actions in current lifecycle phase' });
+    }
+
     // Compute allocated vs paid for this date & user
     const [rows] = await pool.query(
       `SELECT
@@ -328,6 +351,7 @@ router.post('/pay/bulk', async (req: Request, res: Response) => {
         `SELECT
            d.id AS date_id,
            d.event_date,
+           d.status,
            COALESCE(SUM(CASE WHEN p.kind = 'member_allocation' THEN p.amount_eur ELSE 0 END), 0) AS allocated_eur,
            COALESCE(SUM(CASE WHEN p.kind = 'member_paid' THEN p.amount_eur ELSE 0 END), 0) AS paid_eur
          FROM dates d
@@ -347,10 +371,16 @@ router.post('/pay/bulk', async (req: Request, res: Response) => {
       let applied = 0;
       let fullyPaidCount = 0;
       let partialDateId: number | null = null;
+      let skippedByLifecycle = 0;
 
       for (const r of rows as any[]) {
         if (remainingBudget <= 0) break;
         const dateId = r.date_id as number;
+        const phase = getLifecyclePhase({ event_date: r.event_date as Date, status: String(r.status || '') });
+        if (!canEditByLifecyclePhase(phase, 'member_paid')) {
+          skippedByLifecycle += 1;
+          continue;
+        }
         const allocated = Number(r.allocated_eur || 0);
         const paid = Number(r.paid_eur || 0);
         const remainingForDate = allocated - paid;
@@ -414,6 +444,7 @@ router.post('/pay/bulk', async (req: Request, res: Response) => {
         remaining_amount: totalAmount - applied,
         fully_paid_dates: fullyPaidCount,
         partial_date_id: partialDateId,
+        skipped_lifecycle_dates: skippedByLifecycle,
         paid_currency: payFx.currency,
         paid_exchange_rate: payFx.rate,
       });

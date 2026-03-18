@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import FilterBar from './filters/FilterBar';
 import FilterSummary from './filters/FilterSummary';
@@ -18,8 +19,6 @@ type Props = {
   bandOptions: BandOption[];
   openMenu: 'view' | 'timeline' | 'band' | null;
   setOpenMenu: Dispatch<SetStateAction<'view' | 'timeline' | 'band' | null>>;
-  menuCloseTimer: number | null;
-  setMenuCloseTimer: (id: number | null) => void;
 };
 
 function EventsToolbar({
@@ -32,18 +31,42 @@ function EventsToolbar({
   bandOptions,
   openMenu,
   setOpenMenu,
-  menuCloseTimer,
-  setMenuCloseTimer,
 }: Props) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
   const short = (value: string) =>
     value.length > 15 ? `${value.slice(0, 15)}` : value;
 
-  const clearTimer = () => {
-    if (menuCloseTimer) {
-      window.clearTimeout(menuCloseTimer);
-      setMenuCloseTimer(null);
+  const cancelCloseTimer = () => {
+    if (closeTimerRef.current != null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
     }
   };
+
+  const scheduleClose = (menu: 'view' | 'timeline' | 'band') => {
+    cancelCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      setOpenMenu((curr) => (curr === menu ? null : curr));
+      closeTimerRef.current = null;
+    }, 2000);
+  };
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!openMenu) return;
+      const root = rootRef.current;
+      if (!root) return;
+      if (event.target instanceof Node && !root.contains(event.target)) {
+        setOpenMenu(null);
+      }
+    };
+    window.addEventListener('mousedown', onPointerDown);
+    return () => {
+      window.removeEventListener('mousedown', onPointerDown);
+      cancelCloseTimer();
+    };
+  }, [openMenu, setOpenMenu]);
 
   const viewLabel = activeTab === 'schedule' ? 'Schedule' : 'Ledger';
   const timelineLabel =
@@ -54,29 +77,24 @@ function EventsToolbar({
       : bandOptions.find((b) => b.id === bandFilter)?.name || 'All bands';
 
   return (
-    <FilterBar
-      className="events-toolbar filter-bar"
-      summary={
-        <FilterSummary
-          items={[
-            { label: 'View', value: viewLabel },
-            { label: 'Timeline', value: timelineLabel },
-            { label: 'Band', value: selectedBand },
-          ]}
-        />
-      }
-    >
+    <div ref={rootRef}>
+      <FilterBar
+        className="events-toolbar filter-bar"
+        summary={
+          <FilterSummary
+            items={[
+              { label: 'View', value: viewLabel },
+              { label: 'Timeline', value: timelineLabel },
+              { label: 'Band', value: selectedBand },
+            ]}
+          />
+        }
+      >
       <div
         className="events-toolbar-group"
-        onMouseEnter={clearTimer}
+        onMouseEnter={cancelCloseTimer}
         onMouseLeave={() => {
-          if (openMenu === 'view') {
-            const id = window.setTimeout(
-              () => setOpenMenu((curr) => (curr === 'view' ? null : curr)),
-              2000,
-            );
-            setMenuCloseTimer(id);
-          }
+          if (openMenu === 'view') scheduleClose('view');
         }}
       >
         <button
@@ -114,15 +132,9 @@ function EventsToolbar({
 
       <div
         className="events-toolbar-group"
-        onMouseEnter={clearTimer}
+        onMouseEnter={cancelCloseTimer}
         onMouseLeave={() => {
-          if (openMenu === 'timeline') {
-            const id = window.setTimeout(
-              () => setOpenMenu((curr) => (curr === 'timeline' ? null : curr)),
-              2000,
-            );
-            setMenuCloseTimer(id);
-          }
+          if (openMenu === 'timeline') scheduleClose('timeline');
         }}
       >
         <button
@@ -170,15 +182,9 @@ function EventsToolbar({
 
       <div
         className="events-toolbar-group"
-        onMouseEnter={clearTimer}
+        onMouseEnter={cancelCloseTimer}
         onMouseLeave={() => {
-          if (openMenu === 'band') {
-            const id = window.setTimeout(
-              () => setOpenMenu((curr) => (curr === 'band' ? null : curr)),
-              2000,
-            );
-            setMenuCloseTimer(id);
-          }
+          if (openMenu === 'band') scheduleClose('band');
         }}
       >
         <button
@@ -216,7 +222,8 @@ function EventsToolbar({
           </div>
         )}
       </div>
-    </FilterBar>
+      </FilterBar>
+    </div>
   );
 }
 

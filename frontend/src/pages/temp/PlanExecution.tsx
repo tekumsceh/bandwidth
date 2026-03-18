@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { FEATURE_FREEZE_ACTIVE } from '../../config/tempMode';
-import { PHASES, loadTempPlanState, saveTempPlanState } from './planState';
+import { EXECUTION_QUEUE, PHASES, loadTempPlanState, saveTempPlanState } from './planState';
 
 type FeatureCandidate = {
   id: string;
@@ -24,6 +24,9 @@ function PlanExecution() {
   const initial = loadTempPlanState();
   const [approvedCoreRoadmap, setApprovedCoreRoadmap] = useState(initial.approvedCoreRoadmap);
   const [completedPhases, setCompletedPhases] = useState<string[]>(initial.completedPhases);
+  const [completedExecutionItems, setCompletedExecutionItems] = useState<string[]>(
+    initial.completedExecutionItems || []
+  );
   const [pendingDecisions, setPendingDecisions] = useState<string[]>(initial.pendingDecisions);
   const ranked = useMemo(
     () => [...DEFAULT_CANDIDATES].sort((a, b) => score(b) - score(a)),
@@ -35,12 +38,14 @@ function PlanExecution() {
   const persist = (next: {
     approvedCoreRoadmap?: boolean;
     completedPhases?: string[];
+    completedExecutionItems?: string[];
     pendingDecisions?: string[];
   }) => {
     const state = {
       approvedCoreRoadmap:
         next.approvedCoreRoadmap !== undefined ? next.approvedCoreRoadmap : approvedCoreRoadmap,
       completedPhases: next.completedPhases || completedPhases,
+      completedExecutionItems: next.completedExecutionItems || completedExecutionItems,
       pendingDecisions: next.pendingDecisions || pendingDecisions,
     };
     saveTempPlanState(state);
@@ -77,6 +82,33 @@ function PlanExecution() {
             {approvedCoreRoadmap ? 'Re-enable freeze' : 'Mark core roadmap approved'}
           </button>
         </div>
+      </section>
+
+      <section className="event-detail-section" style={{ marginTop: '1rem' }}>
+        <h2>Execution queue</h2>
+        <ul className="lineup-list">
+          {EXECUTION_QUEUE.map((item) => {
+            const done = completedExecutionItems.includes(item);
+            return (
+              <li key={item}>
+                <span className="lineup-name">{item}</span>
+                <button
+                  type="button"
+                  className="btn btn-action btn-secondary"
+                  onClick={() => {
+                    const next = done
+                      ? completedExecutionItems.filter((p) => p !== item)
+                      : [...completedExecutionItems, item];
+                    setCompletedExecutionItems(next);
+                    persist({ completedExecutionItems: next });
+                  }}
+                >
+                  {done ? 'Mark open' : 'Mark done'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       <section className="event-detail-section" style={{ marginTop: '1rem' }}>

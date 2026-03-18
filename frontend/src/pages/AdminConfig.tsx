@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import StatusBlock from '../components/StatusBlock';
+import BackNavLink from '../components/BackNavLink';
+import { apiUrl } from '../config/api';
 import type { CurrentUser } from '../types';
 
 type Props = {
@@ -57,8 +59,8 @@ function AdminConfig({ me }: Props) {
     setError(null);
     try {
       const [cfgRes, intRes] = await Promise.all([
-        fetch('http://localhost:5000/api/admin/config/pages'),
-        fetch('http://localhost:5000/api/interventions'),
+        fetch(apiUrl('/api/admin/config/pages')),
+        fetch(apiUrl('/api/interventions')),
       ]);
       if (!cfgRes.ok) {
         const json = await cfgRes.json().catch(() => null);
@@ -84,7 +86,7 @@ function AdminConfig({ me }: Props) {
   const saveListing = async () => {
     if (!selectedListing) return;
     setSaveMessage(null);
-    const res = await fetch(`http://localhost:5000/api/admin/config/pages/${selectedPage}/listing`, {
+    const res = await fetch(apiUrl(`/api/admin/config/pages/${selectedPage}/listing`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(selectedListing),
@@ -115,7 +117,7 @@ function AdminConfig({ me }: Props) {
         })(),
       })),
     };
-    const res = await fetch(`http://localhost:5000/api/admin/config/pages/${selectedPage}/filters`, {
+    const res = await fetch(apiUrl(`/api/admin/config/pages/${selectedPage}/filters`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -136,7 +138,7 @@ function AdminConfig({ me }: Props) {
       setSaveMessage('Intervention request requires date id, band id and reason.');
       return;
     }
-    const res = await fetch('http://localhost:5000/api/interventions/request', {
+    const res = await fetch(apiUrl('/api/interventions/request'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -165,6 +167,7 @@ function AdminConfig({ me }: Props) {
     <div className="page">
       <header className="page-header">
         <div>
+          <BackNavLink />
           <h1>App admin config</h1>
           <div className="page-header-sub">Listing/filter schema and governance controls.</div>
         </div>
@@ -283,7 +286,7 @@ function GodGrantForm({ onSaved }: { onSaved: () => Promise<void> }) {
       setMsg('Enter a valid user id');
       return;
     }
-    const res = await fetch(`http://localhost:5000/api/admin/config/access/users/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/config/access/users/${id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ can_access_admin: enabled, access_level: accessLevel }),

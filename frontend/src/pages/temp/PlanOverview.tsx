@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
-import { PHASES, loadTempPlanState } from './planState';
+import { EXECUTION_QUEUE, PHASES, loadTempPlanState } from './planState';
 
 function PlanOverview() {
   const state = loadTempPlanState();
-  const completedCount = state.completedPhases.length;
-  const pct = useMemo(() => Math.round((completedCount / PHASES.length) * 100), [completedCount]);
+  const completedCount = state.completedExecutionItems.length;
+  const pct = useMemo(
+    () => Math.round((completedCount / EXECUTION_QUEUE.length) * 100),
+    [completedCount],
+  );
 
   return (
     <div className="page">
@@ -37,6 +40,7 @@ function PlanOverview() {
           </div>
         </div>
         <p className="muted">{pct}% complete</p>
+        <p className="muted">Completed execution items: {completedCount}/{EXECUTION_QUEUE.length}</p>
         <p className="muted">Pending decisions: {state.pendingDecisions.length}</p>
       </section>
 

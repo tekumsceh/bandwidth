@@ -37,15 +37,17 @@ router.post('/request', async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
-  const appAdmin = await canConfigureApp(user);
-  if (!appAdmin) return res.status(403).json({ error: 'App admin access required' });
-
   const dateId = Number(req.body?.date_id);
   const bandId = Number(req.body?.band_id);
   const reason = String(req.body?.reason || '').trim();
   const scope = req.body?.scope_json ?? null;
   if (!Number.isFinite(dateId) || !Number.isFinite(bandId) || !reason) {
     return res.status(400).json({ error: 'date_id, band_id and reason are required' });
+  }
+
+  const canRequest = await canManageBandFinance(bandId, user.id);
+  if (!canRequest) {
+    return res.status(403).json({ error: 'Band admin/owner access required' });
   }
 
   const [result] = await pool.query(

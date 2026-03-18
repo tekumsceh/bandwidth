@@ -1,3 +1,5 @@
+import BackNavLink from './BackNavLink';
+
 type Props = {
   activeTab: 'overview' | 'execution' | 'ledger';
   title: string | null;
@@ -29,6 +31,7 @@ function EventHeaderMeta({
   return (
     <header className="page-header">
       <div className="page-header-main">
+        <BackNavLink />
         <h1>
           {sectionTitle} – {title || `${bandName} @ ${venueName || 'TBA'}`}
         </h1>
