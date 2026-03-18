@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import BackNavLink from '../../components/BackNavLink';
 import { apiUrl } from '../../config/api';
@@ -35,6 +35,18 @@ const CHANNEL_RANGES = [
   { key: '25-32', start: 24, end: 32 },
 ] as const;
 
+/** Portrait/phone: 4 channels per view */
+const CHANNEL_RANGES_PORTRAIT = [
+  { key: '1-4', start: 0, end: 4 },
+  { key: '5-8', start: 4, end: 8 },
+  { key: '9-12', start: 8, end: 12 },
+  { key: '13-16', start: 12, end: 16 },
+  { key: '17-20', start: 16, end: 20 },
+  { key: '21-24', start: 20, end: 24 },
+  { key: '25-28', start: 24, end: 28 },
+  { key: '29-32', start: 28, end: 32 },
+] as const;
+
 const CHANNEL_COLORS = [
   '#1e293b', '#334155', '#475569', '#64748b',
   '#f97316', '#22c55e', '#3b82f6', '#a855f7',
@@ -46,6 +58,34 @@ type BandMember = { id: number; display_name: string };
 /** Channels 1-4 (per group) open right; 5-8 open left */
 function usePopupSide(ch: number) {
   return (ch % 8) < 4;
+}
+
+/** Returns true when viewport is narrow (portrait / phone) — use 4-channel ranges */
+function useIsPortrait() {
+  const [isPortrait, setIsPortrait] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 480px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 480px)');
+    const onChange = () => setIsPortrait(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isPortrait;
+}
+
+/** Returns true when patch table should move below strips and be collapsible */
+function useIsPatchTableBelow() {
+  const [below, setBelow] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const onChange = () => setBelow(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return below;
 }
 
 /** Handheld microphone - Font Awesome */
@@ -69,22 +109,40 @@ function StripDivider() {
   return <div className="io-patch-strip-divider" aria-hidden />;
 }
 
+type ChannelRangeKey = typeof CHANNEL_RANGES[number]['key'] | typeof CHANNEL_RANGES_PORTRAIT[number]['key'];
+
 export default function IOPatchPage() {
   const [searchParams] = useSearchParams();
   const bandIdParam = searchParams.get('bandId');
+  const isPortrait = useIsPortrait();
+  const isPatchTableBelow = useIsPatchTableBelow();
 
   const [bands, setBands] = useState<{ id: number; name: string }[]>([]);
   const [bandMembers, setBandMembers] = useState<BandMember[]>([]);
   const [bandId, setBandId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [inputChannelRange, setInputChannelRange] = useState<typeof CHANNEL_RANGES[number]['key']>('1-8');
-  const [outputChannelRange, setOutputChannelRange] = useState<typeof CHANNEL_RANGES[number]['key']>('1-8');
+  const channelRanges = isPortrait ? CHANNEL_RANGES_PORTRAIT : CHANNEL_RANGES;
+  const [inputChannelRange, setInputChannelRange] = useState<ChannelRangeKey>('1-8');
+  const [outputChannelRange, setOutputChannelRange] = useState<ChannelRangeKey>('1-8');
   const [showOutput, setShowOutput] = useState(false);
+  const [patchTableExpanded, setPatchTableExpanded] = useState(false);
 
-  const rangeConfig = CHANNEL_RANGES.find((r) => r.key === (showOutput ? outputChannelRange : inputChannelRange)) ?? CHANNEL_RANGES[0];
+  const rangeConfig = useMemo(() => {
+    const current = showOutput ? outputChannelRange : inputChannelRange;
+    const found = channelRanges.find((r) => r.key === current);
+    return found ?? channelRanges[0];
+  }, [channelRanges, showOutput, outputChannelRange, inputChannelRange]);
   const channelStart = rangeConfig.start;
   const channelEnd = rangeConfig.end;
+
+  /* Normalize range when switching portrait ↔ desktop */
+  useEffect(() => {
+    const validIn = channelRanges.some((r) => r.key === inputChannelRange);
+    const validOut = channelRanges.some((r) => r.key === outputChannelRange);
+    if (!validIn) setInputChannelRange(channelRanges[0].key);
+    if (!validOut) setOutputChannelRange(channelRanges[0].key);
+  }, [channelRanges, inputChannelRange, outputChannelRange]);
 
   // Input patch state: channel index 0–31 -> { mic, stand }
   const [inputPatch, setInputPatch] = useState<
@@ -140,11 +198,11 @@ export default function IOPatchPage() {
     inputChannelLR?: Record<number, string>;
     outputChannelLR?: Record<number, string>;
   }) => {
-    if (data.inputChannelRange) setInputChannelRange(data.inputChannelRange as typeof CHANNEL_RANGES[number]['key']);
-    if (data.outputChannelRange) setOutputChannelRange(data.outputChannelRange as typeof CHANNEL_RANGES[number]['key']);
+    if (data.inputChannelRange) setInputChannelRange(data.inputChannelRange as ChannelRangeKey);
+    if (data.outputChannelRange) setOutputChannelRange(data.outputChannelRange as ChannelRangeKey);
     if (data.channelRange) {
-      setInputChannelRange(data.channelRange as typeof CHANNEL_RANGES[number]['key']);
-      setOutputChannelRange(data.channelRange as typeof CHANNEL_RANGES[number]['key']);
+      setInputChannelRange(data.channelRange as ChannelRangeKey);
+      setOutputChannelRange(data.channelRange as ChannelRangeKey);
     }
     if (data.showOutput !== undefined) setShowOutput(data.showOutput);
     if (data.inputPatch) {
@@ -487,7 +545,9 @@ export default function IOPatchPage() {
       {loading ? (
         <div className="io-patch-loading">Loading…</div>
       ) : (
-        <div className="io-patch-body">
+        <div
+          className={`io-patch-body ${isPatchTableBelow ? 'io-patch-body-stacked' : ''} ${patchTableExpanded ? 'io-patch-patch-expanded' : ''}`}
+        >
           <div className="io-patch-content">
             <div className="io-patch-action-bar">
               <div className="io-patch-action-dropdown-wrap">
@@ -558,8 +618,8 @@ export default function IOPatchPage() {
                       </>
                     )}
                   </button>
-                  <div className={`io-patch-range-group ${showOutput ? 'io-patch-range-output' : 'io-patch-range-input'}`}>
-                    {CHANNEL_RANGES.map((r) => (
+                  <div className={`io-patch-range-group ${showOutput ? 'io-patch-range-output' : 'io-patch-range-input'} ${isPortrait ? 'io-patch-range-portrait' : ''}`}>
+                    {channelRanges.map((r) => (
                       <button
                         key={r.key}
                         type="button"
@@ -705,23 +765,87 @@ export default function IOPatchPage() {
               </div>
             </section>
           </div>
-          <aside className="io-patch-aside">
-            {showOutput ? (
-              <OutputPatchTable
-                outputPatch={outputPatch}
-                outputChannelSkips={outputChannelSkips}
-                outputChannelLR={outputChannelLR}
-                outputChannelLinks={outputChannelLinks}
-              />
+          <aside
+            className={`io-patch-aside ${isPatchTableBelow ? 'io-patch-aside-below' : ''}`}
+          >
+            {isPatchTableBelow ? (
+              <div className="io-patch-accordion">
+                <button
+                  type="button"
+                  className="io-patch-accordion-trigger"
+                  onClick={() => setPatchTableExpanded((v) => !v)}
+                  aria-expanded={patchTableExpanded}
+                  aria-controls="io-patch-accordion-panel"
+                >
+                  <span className="io-patch-accordion-label">
+                    {showOutput ? 'Output patch' : 'Input patch'}
+                  </span>
+                  <span className="io-patch-accordion-icon" aria-hidden>
+                    {patchTableExpanded ? '▴' : '▾'}
+                  </span>
+                </button>
+                <div
+                  id="io-patch-accordion-panel"
+                  className={`io-patch-accordion-panel ${patchTableExpanded ? 'expanded' : ''}`}
+                  role="region"
+                  aria-label={showOutput ? 'Output patch table' : 'Input patch table'}
+                >
+                  {patchTableExpanded && (
+                    <>
+                      <div
+                        className="io-patch-accordion-backdrop"
+                        onClick={() => setPatchTableExpanded(false)}
+                        aria-hidden
+                      />
+                      <button
+                        type="button"
+                        className="io-patch-accordion-close"
+                        onClick={() => setPatchTableExpanded(false)}
+                        aria-label="Close patch table"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
+                  {showOutput ? (
+                    <OutputPatchTable
+                      outputPatch={outputPatch}
+                      outputChannelSkips={outputChannelSkips}
+                      outputChannelLR={outputChannelLR}
+                      outputChannelLinks={outputChannelLinks}
+                    />
+                  ) : (
+                    <InputPatchTable
+                      inputPatch={inputPatch}
+                      inputChannelInstruments={inputChannelInstruments}
+                      inputChannelInstrumentLabels={inputChannelInstrumentLabels}
+                      inputChannelSkips={inputChannelSkips}
+                      inputChannelLR={inputChannelLR}
+                      inputChannelLinks={inputChannelLinks}
+                    />
+                  )}
+                </div>
+              </div>
             ) : (
-              <InputPatchTable
-                inputPatch={inputPatch}
-                inputChannelInstruments={inputChannelInstruments}
-                inputChannelInstrumentLabels={inputChannelInstrumentLabels}
-                inputChannelSkips={inputChannelSkips}
-                inputChannelLR={inputChannelLR}
-                inputChannelLinks={inputChannelLinks}
-              />
+              <>
+                {showOutput ? (
+                  <OutputPatchTable
+                    outputPatch={outputPatch}
+                    outputChannelSkips={outputChannelSkips}
+                    outputChannelLR={outputChannelLR}
+                    outputChannelLinks={outputChannelLinks}
+                  />
+                ) : (
+                  <InputPatchTable
+                    inputPatch={inputPatch}
+                    inputChannelInstruments={inputChannelInstruments}
+                    inputChannelInstrumentLabels={inputChannelInstrumentLabels}
+                    inputChannelSkips={inputChannelSkips}
+                    inputChannelLR={inputChannelLR}
+                    inputChannelLinks={inputChannelLinks}
+                  />
+                )}
+              </>
             )}
           </aside>
         </div>

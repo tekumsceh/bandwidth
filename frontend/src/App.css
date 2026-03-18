@@ -1379,14 +1379,60 @@ body,
 
 @media (max-width: 768px) {
   .app-shell {
-    flex-direction: column;
+    /* Keep row layout; sidebar overlays via fixed positioning */
   }
 
+  /* Sidebar accordion: hidden by default, slides in from left */
   .app-sidebar {
-    width: 100%;
-    flex-direction: row;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 220px;
+    max-width: 85vw;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .app-shell.app-sidebar-open .app-sidebar {
+    transform: translateX(0);
+  }
+
+  .app-sidebar-handle {
+    display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 25px;
+    max-width: 25px;
+    min-height: 80px;
+    z-index: 99;
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    color: #9ca3af;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .app-sidebar-handle:hover {
+    background: #1e293b;
+    color: #e5e7eb;
+  }
+
+  .app-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 98;
+    cursor: pointer;
   }
 
   .app-main {
@@ -1418,5 +1464,12 @@ body,
 
   .assets-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Hide sidebar handle on larger screens */
+@media (min-width: 769px) {
+  .app-sidebar-handle {
+    display: none;
   }
 }

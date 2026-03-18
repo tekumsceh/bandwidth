@@ -14,8 +14,6 @@ export const APP_ROUTES = {
   settings: '/settings',
   adminConfig: '/admin/config',
   labTestingGround: '/_lab/testing-ground',
-  labPlanOverview: '/_lab/plan-overview',
-  labPlanExecution: '/_lab/plan-execution',
 } as const;
 
 export type NavItem = {
@@ -42,6 +40,4 @@ export const ASSET_NAV_ITEMS: readonly NavItem[] = [
 
 export const TEMP_LAB_NAV_ITEMS: readonly NavItem[] = [
   { key: 'testing-ground', label: 'Testing ground', to: APP_ROUTES.labTestingGround },
-  { key: 'plan-overview', label: 'Plan overview', to: APP_ROUTES.labPlanOverview },
-  { key: 'plan-execution', label: 'Plan execution', to: APP_ROUTES.labPlanExecution },
 ] as const;

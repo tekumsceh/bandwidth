@@ -83,6 +83,24 @@
   overflow: hidden;
 }
 
+/* Stacked layout: patch table below strips, collapsible */
+.io-patch-body.io-patch-body-stacked {
+  flex-direction: column;
+}
+
+.io-patch-body.io-patch-body-stacked .io-patch-content {
+  flex: 0 0 auto;
+}
+
+.io-patch-body.io-patch-body-stacked .io-patch-aside {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  max-height: none;
+}
+
 .io-patch-content {
   flex: 1;
   padding: 1rem 1.25rem;
@@ -988,6 +1006,124 @@
   border-radius: 10px;
   overflow: hidden;
   box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Accordion when patch table is below strips */
+.io-patch-accordion {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.io-patch-accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: #252525;
+  border: 2px solid #3a3a3a;
+  border-radius: 8px;
+  color: #e5e7eb;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.io-patch-accordion-trigger:hover {
+  background: #2a2a2a;
+  border-color: #4a4a4a;
+}
+
+.io-patch-accordion-label {
+  flex: 1;
+  text-align: left;
+}
+
+.io-patch-accordion-icon {
+  opacity: 0.8;
+  margin-left: 0.5rem;
+}
+
+.io-patch-accordion-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.io-patch-accordion-panel.expanded {
+  max-height: 100vh;
+  opacity: 1;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #121212;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.io-patch-accordion-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1;
+  cursor: pointer;
+}
+
+.io-patch-accordion-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: #252525;
+  border: 2px solid #3a3a3a;
+  border-radius: 8px;
+  color: #9ca3af;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.io-patch-accordion-close:hover {
+  background: #2a2a2a;
+  border-color: #4a4a4a;
+  color: #e5e7eb;
+}
+
+.io-patch-accordion-panel.expanded .io-patch-table-wrap {
+  flex: 1;
+  min-height: 0;
+  margin-top: 2.5rem;
+  position: relative;
+  z-index: 2;
+  background: #1e1e1e;
+  border: 2px solid #3a3a3a;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Portrait: 8 range buttons in 2 columns */
+.io-patch-range-portrait.io-patch-range-group {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.io-patch-range-portrait .io-patch-range-btn {
+  flex: 1 1 calc(50% - 0.25rem);
+  min-width: 0;
 }
 
 .io-patch-table-wrap {

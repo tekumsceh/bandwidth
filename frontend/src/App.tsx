@@ -15,8 +15,6 @@ import GearPage from './pages/assets/Gear';
 import SetlistsPage from './pages/assets/Setlists';
 import PatchPage from './pages/assets/Patch';
 import TestingGround from './pages/temp/TestingGround';
-import PlanOverview from './pages/temp/PlanOverview';
-import PlanExecution from './pages/temp/PlanExecution';
 import { TEMP_PAGES_ENABLED } from './config/tempMode';
 import { APP_ROUTES, WORK_NAV_ITEMS, ACCOUNT_NAV_ITEMS, ASSET_NAV_ITEMS, TEMP_LAB_NAV_ITEMS } from './config/navigation';
 import type { CurrentUser } from './types';
@@ -189,9 +187,32 @@ function AppAuthenticatedShell({
 }) {
   const location = useLocation();
   const isIOPatchPage = location.pathname === APP_ROUTES.assetsPatch;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isSidebarOpen ? 'app-sidebar-open' : ''}`}>
+        <button
+          type="button"
+          className="app-sidebar-handle"
+          onClick={() => setIsSidebarOpen((v) => !v)}
+          aria-label={isSidebarOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={isSidebarOpen}
+        >
+          <span className="app-sidebar-handle-icon" aria-hidden>
+            {isSidebarOpen ? '‹' : '›'}
+          </span>
+        </button>
+        {isSidebarOpen && (
+          <div
+            className="app-sidebar-backdrop"
+            onClick={() => setIsSidebarOpen(false)}
+            aria-hidden
+          />
+        )}
         <aside className="app-sidebar">
           <div className="app-logo">Bandwidth</div>
           <nav className="app-nav">
@@ -339,11 +360,7 @@ function AppAuthenticatedShell({
             <Route path={APP_ROUTES.assetsPatch} element={<PatchPage />} />
             <Route path={APP_ROUTES.adminConfig} element={<AdminConfig me={me} />} />
             {TEMP_PAGES_ENABLED && (
-              <>
-                <Route path={APP_ROUTES.labTestingGround} element={<TestingGround />} />
-                <Route path={APP_ROUTES.labPlanOverview} element={<PlanOverview />} />
-                <Route path={APP_ROUTES.labPlanExecution} element={<PlanExecution />} />
-              </>
+              <Route path={APP_ROUTES.labTestingGround} element={<TestingGround />} />
             )}
           </Routes>
         </main>
