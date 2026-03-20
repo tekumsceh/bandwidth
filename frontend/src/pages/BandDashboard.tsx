@@ -10,6 +10,7 @@ import FilterBar from '../components/filters/FilterBar';
 import FilterSummary from '../components/filters/FilterSummary';
 import Listing from '../components/listing/Listing';
 import { APP_ROUTES } from '../config/navigation';
+import { displayBandName } from '../utils/bandDisplay';
 
 function BandDashboard() {
   const { id } = useParams();
@@ -132,7 +133,7 @@ function BandDashboard() {
 
   return (
     <div className="page">
-      <BandHeaderMeta activeTab={activeTab} bandName={detail.band.name} />
+      <BandHeaderMeta activeTab={activeTab} bandName={displayBandName(detail.band.name, detail.band.is_solo)} />
 
       <TabSwitch
         value={activeTab}
@@ -238,7 +239,7 @@ function BandDashboard() {
                     <Link className="event-card btn-nav" to={`/events/${ev.date_id}`} style={{ textDecoration: 'none' }}>
                       <div className="event-date">{dateLabel}</div>
                       <div className="event-main">
-                        <div className="event-title">{ev.title || `${detail.band.name} @ ${ev.venue_name || 'TBA'}`}</div>
+                        <div className="event-title">{ev.title || `${displayBandName(detail.band.name, detail.band.is_solo)} @ ${ev.venue_name || 'TBA'}`}</div>
                         <div className="event-sub">
                           {ev.venue_name || 'Unknown venue'} • {ev.city || '—'}, {ev.country || '—'}
                         </div>

@@ -5,7 +5,13 @@ import EventsHeaderShell from '../components/EventsHeaderShell';
 import EventsToolbar from '../components/EventsToolbar';
 import ScheduleList from '../components/ScheduleList';
 import MyLedgerView from '../components/MyLedgerView';
+import { useAppStatusBar } from '../contexts/AppStatusBarContext';
 import { useEventsPageData } from '../hooks/useEventsPageData';
+import { displayBandName } from '../utils/bandDisplay';
+import {
+  buildDashboardStripEventList,
+  dashboardStripPrimaryEventId,
+} from '../utils/dashboardStripEvents';
 
 function Dashboard() {
   const {
@@ -21,13 +27,18 @@ function Dashboard() {
   } = useEventsPageData();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { setHubStatusExtras } = useAppStatusBar();
   const [bulkPayAmount, setBulkPayAmount] = useState('');
   const [bulkPayStatus, setBulkPayStatus] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<'view' | 'timeline' | 'band' | null>(null);
   const [displayCurrency, setDisplayCurrency] = useState('EUR');
   const [eurToDisplayRate, setEurToDisplayRate] = useState(1);
 
-  const activeTab = (searchParams.get('view') || 'schedule').toLowerCase() === 'ledger' ? 'ledger' : 'schedule';
+  const viewRaw = (searchParams.get('view') || 'dashboard').toLowerCase();
+  const viewMode: 'dashboard' | 'schedule' | 'ledger' =
+    viewRaw === 'ledger' ? 'ledger' : viewRaw === 'schedule' ? 'schedule' : 'dashboard';
+  /** Schedule data (incl. dashboard overview) vs ledger */
+  const dataTab = viewMode === 'ledger' ? 'ledger' : 'schedule';
   const filterRaw = (searchParams.get('timeline') || 'upcoming').toLowerCase();
   const filter: 'upcoming' | 'past' | 'all' =
     filterRaw === 'past' || filterRaw === 'all' ? filterRaw : 'upcoming';
@@ -64,7 +75,7 @@ function Dashboard() {
     const normalized = new URLSearchParams(searchParams);
     let dirty = false;
     if (!normalized.get('view')) {
-      normalized.set('view', activeTab);
+      normalized.set('view', 'dashboard');
       dirty = true;
     }
     if (!normalized.get('timeline')) {
@@ -82,7 +93,7 @@ function Dashboard() {
     if (dirty) {
       setSearchParams(normalized, { replace: true });
     }
-  }, [activeTab, filter, ledgerMode, archive, searchParams, setSearchParams]);
+  }, [filter, ledgerMode, archive, searchParams, setSearchParams]);
 
   useEffect(() => {
     const loadCurrencyContext = async () => {
@@ -109,10 +120,11 @@ function Dashboard() {
     void loadCurrencyContext();
   }, []);
   useEffect(() => {
-    if (activeTab === 'schedule') {
+    if (dataTab === 'schedule') {
       void refresh({
         view: 'schedule',
-        timeline: filter,
+        /** Full schedule so dashboard strips can mix upcoming + past; timeline filter is client-side. */
+        timeline: 'all',
         band: bandFilter,
         archive,
       });
@@ -123,22 +135,24 @@ function Dashboard() {
         archive,
       });
     }
-  }, [activeTab, filter, bandFilter, ledgerBandFilter, ledgerMode, archive, refresh, refreshLedger]);
+  }, [dataTab, filter, bandFilter, ledgerBandFilter, ledgerMode, archive, refresh, refreshLedger]);
 
   const toErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error ? err.message : fallback;
 
   const filteredEvents = useMemo(() => {
-    const now = new Date();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
     const list = events.filter((ev) => {
       // Hide cancelled completely
       if (ev.status === 'cancelled') return false;
 
-      const evDate = new Date(ev.event_date);
+      const evDay = new Date(ev.event_date);
+      const evDayStart = new Date(evDay.getFullYear(), evDay.getMonth(), evDay.getDate());
 
-      if (filter === 'upcoming' && evDate < now) return false;
-      if (filter === 'past' && evDate >= now) return false;
+      if (filter === 'upcoming' && evDayStart < todayStart) return false;
+      if (filter === 'past' && evDayStart >= todayStart) return false;
 
       // Filter by band when bandFilter is set
       if (bandFilter !== 'all' && ev.band_id !== bandFilter) {
@@ -155,16 +169,28 @@ function Dashboard() {
     );
   }, [events, filter, bandFilter]);
 
+  const dashboardStripEvents = useMemo(
+    () => buildDashboardStripEventList(events, bandFilter),
+    [events, bandFilter],
+  );
+
+  const dashboardStripPrimaryId = useMemo(
+    () => dashboardStripPrimaryEventId(events, bandFilter),
+    [events, bandFilter],
+  );
+
   const timelineBandOptions = useMemo(() => {
-    const now = new Date();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
     const allowedBandIds = new Set<number>();
 
     for (const ev of events) {
       if (ev.status === 'cancelled') continue;
-      const evDate = new Date(ev.event_date);
+      const evDay = new Date(ev.event_date);
+      const evDayStart = new Date(evDay.getFullYear(), evDay.getMonth(), evDay.getDate());
 
-      if (filter === 'upcoming' && evDate < now) continue;
-      if (filter === 'past' && evDate >= now) continue;
+      if (filter === 'upcoming' && evDayStart < todayStart) continue;
+      if (filter === 'past' && evDayStart >= todayStart) continue;
 
       allowedBandIds.add(ev.band_id);
     }
@@ -181,18 +207,22 @@ function Dashboard() {
   }, [bandFilter, timelineBandOptions, setBandFilter]);
 
   const ledgerBands = useMemo(() => {
-    const bandSet = Array.from(new Set(ledgerEvents.map((ev) => ev.band_name))).sort(
-      (a, b) => a.localeCompare(b),
-    );
-    return bandSet.map((name) => {
-      const initials = name
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((part) => part[0]?.toUpperCase() ?? '')
-        .join('')
-        .slice(0, 4);
-      return { name, initials };
-    });
+    const byId = new Map<number, (typeof ledgerEvents)[0]>();
+    for (const ev of ledgerEvents) {
+      if (!byId.has(ev.band_id)) byId.set(ev.band_id, ev);
+    }
+    return Array.from(byId.values())
+      .map((ev) => {
+        const name = displayBandName(ev.band_name, ev.band_is_solo);
+        const initials = name
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((part) => part[0]?.toUpperCase() ?? '')
+          .join('')
+          .slice(0, 4);
+        return { name, initials };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [ledgerEvents]);
 
   const filteredLedgerEvents = useMemo(() => {
@@ -230,7 +260,7 @@ function Dashboard() {
 
     // Totals should match what is actually displayed in the table
     for (const ev of filteredLedgerEvents) {
-      const band = ev.band_name;
+      const band = displayBandName(ev.band_name, ev.band_is_solo);
       const allocated = Number(ev.allocated_eur || 0);
       const paid = Number(ev.paid_eur || 0);
       if (!bandTotals[band]) {
@@ -303,50 +333,88 @@ function Dashboard() {
     }
   };
 
-  return (
-    <div className="page">
-      <EventsHeaderShell title={activeTab === 'schedule' ? 'Schedule' : 'My ledger'} showBack={false}>
-        <EventsToolbar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          filter={filter}
-          setFilter={setFilter}
-          bandFilter={bandFilter}
-          setBandFilter={setBandFilter}
-          bandOptions={timelineBandOptions}
-          openMenu={openMenu}
-          setOpenMenu={setOpenMenu}
-        />
-      </EventsHeaderShell>
+  const nextEventLabel = useMemo(() => {
+    if (filteredEvents.length === 0) return '—';
+    const d = new Date(filteredEvents[0].event_date);
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }, [filteredEvents]);
 
-      {activeTab === 'schedule' && (
+  useEffect(() => {
+    if (viewMode !== 'dashboard') {
+      setHubStatusExtras(null);
+      return;
+    }
+    setHubStatusExtras(
+      <>
+        <span className="app-status-bar-hub-next">Next · {nextEventLabel}</span>
+        <span className="app-status-bar-sep" aria-hidden>
+          ·
+        </span>
+        <span className="app-status-bar-hub-stat">{filteredEvents.length} upcoming</span>
+      </>,
+    );
+    return () => setHubStatusExtras(null);
+  }, [viewMode, filteredEvents.length, nextEventLabel, setHubStatusExtras]);
+
+  const pageTitle =
+    viewMode === 'ledger' ? 'Finance' : viewMode === 'schedule' ? 'Gigs' : 'Overview';
+  const pageSubtitle =
+    viewMode === 'ledger'
+      ? 'My ledger · settlements & payouts'
+      : viewMode === 'schedule'
+        ? 'Gig management · timeline & routing'
+        : 'Main Mix / Stereo Bus';
+
+  const summaryViewLabel = 'Finance';
+
+  /** Console-style overview: no title row — strips only. */
+  const showEventsHeader = !(viewMode === 'dashboard' && dataTab === 'schedule');
+
+  return (
+    <div className={`page page-events-hub page-events-hub--${viewMode}`}>
+      {showEventsHeader ? (
+        <EventsHeaderShell title={pageTitle} subtitle={pageSubtitle} showBack={false}>
+          {dataTab === 'ledger' ? (
+            <EventsToolbar
+              activeTab={dataTab}
+              setActiveTab={setActiveTab}
+              filter={filter}
+              setFilter={setFilter}
+              bandFilter={bandFilter}
+              setBandFilter={setBandFilter}
+              bandOptions={timelineBandOptions}
+              openMenu={openMenu}
+              setOpenMenu={setOpenMenu}
+              hideViewSwitch
+              summaryViewLabel={summaryViewLabel}
+            />
+          ) : null}
+        </EventsHeaderShell>
+      ) : null}
+
+      {dataTab === 'schedule' && (
         <>
-          <ScheduleList
-            events={filteredEvents}
-            loading={loading}
-            error={error}
-            filter={filter}
-            onSelectEvent={(id) => navigate(`/events/${id}`)}
-          />
           <div
-            className="event-detail-section quick-date-panel"
-            style={{ marginTop: '0.75rem' }}
+            className={
+              viewMode === 'dashboard' ? 'dashboard-overview-well' : undefined
+            }
           >
-            <h2>Add date</h2>
-            <QuickCreateInline bands={bandOptions} onCreated={(id) => navigate(`/events/${id}`)} />
+            <ScheduleList
+              events={viewMode === 'dashboard' ? dashboardStripEvents : filteredEvents}
+              loading={loading}
+              error={error}
+              filter={filter}
+              layout={viewMode === 'dashboard' ? 'strips' : 'cards'}
+              dashboardStripMode={viewMode === 'dashboard'}
+              stripPrimaryEventId={viewMode === 'dashboard' ? dashboardStripPrimaryId : null}
+              onAddDate={() => navigate('/events/new')}
+              onSelectEvent={(id) => navigate(`/events/${id}`)}
+            />
           </div>
-          <button
-            type="button"
-            className="fab-button btn-fab"
-            onClick={() => navigate('/events/new')}
-            aria-label="Create new show"
-          >
-            +
-          </button>
         </>
       )}
 
-      {activeTab === 'ledger' && (
+      {dataTab === 'ledger' && (
         <MyLedgerView
           ledgerEvents={ledgerEvents}
           filteredLedgerEvents={filteredLedgerEvents}
@@ -369,70 +437,6 @@ function Dashboard() {
           eurToDisplayRate={eurToDisplayRate}
         />
       )}
-    </div>
-  );
-}
-
-type QuickCreateProps = {
-  bands: { id: number; name: string }[];
-  onCreated: (id: number) => void;
-};
-
-function QuickCreateInline({ bands, onCreated }: QuickCreateProps) {
-  const [bandId, setBandId] = useState('');
-  const [date, setDate] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const create = async () => {
-    if (!bandId || !date) {
-      setError('Band and date are required.');
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch(apiUrl('/api/dates/quick'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ band_id: Number(bandId), event_date: date }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || `Failed (${res.status})`);
-      onCreated(Number(json.id));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to quick-create');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="quick-create-form">
-      <select value={bandId} onChange={(e) => setBandId(e.target.value)}>
-        <option value="">Band</option>
-        {bands.map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.name}
-          </option>
-        ))}
-      </select>
-      <input
-        type="date"
-        min={new Date().toISOString().split('T')[0]}
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        placeholder="Date"
-      />
-      <button
-        type="button"
-        className="btn btn-action quick-create-btn"
-        disabled={saving}
-        onClick={create}
-      >
-        {saving ? 'ADDING...' : 'ADD'}
-      </button>
-      {error ? <p className="muted">{error}</p> : null}
     </div>
   );
 }

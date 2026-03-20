@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { eventsHubHref } from '../config/navigation';
 
 type Props = {
   label?: string;
@@ -8,7 +9,7 @@ type Props = {
   onBeforeBack?: () => boolean | Promise<boolean>;
 };
 
-function BackNavLink({ label = 'Back', fallbackTo = '/events', className = 'back-nav-link', onBeforeBack }: Props) {
+function BackNavLink({ label = 'Back', fallbackTo = eventsHubHref('dashboard'), className = 'back-nav-link', onBeforeBack }: Props) {
   const navigate = useNavigate();
 
   const onClick = async (e: MouseEvent<HTMLAnchorElement>) => {

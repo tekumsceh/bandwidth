@@ -2,12 +2,25 @@ import { useEffect, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import FilterBar from './filters/FilterBar';
 import FilterSummary from './filters/FilterSummary';
+import { bandOptionLabel } from '../utils/bandDisplay';
 
 type BandOption = {
   id: number;
   name: string;
   color?: string | null;
+  is_solo?: 0 | 1;
 };
+
+function hexToRgba(hex: string | null | undefined, alpha: number): string {
+  const h = (hex || '#64748b').trim();
+  const m = /^#?([0-9a-f]{6})$/i.exec(h);
+  if (!m) return `rgba(100, 116, 139, ${alpha})`;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 type Props = {
   activeTab: 'schedule' | 'ledger';
@@ -19,6 +32,10 @@ type Props = {
   bandOptions: BandOption[];
   openMenu: 'view' | 'timeline' | 'band' | null;
   setOpenMenu: Dispatch<SetStateAction<'view' | 'timeline' | 'band' | null>>;
+  /** Hide Schedule/Ledger switch — use top navigation (Dashboard / Dates / Finance) instead */
+  hideViewSwitch?: boolean;
+  /** Override "View" line in the filter summary (e.g. Dashboard / Dates / Finance) */
+  summaryViewLabel?: string;
 };
 
 function EventsToolbar({
@@ -31,6 +48,8 @@ function EventsToolbar({
   bandOptions,
   openMenu,
   setOpenMenu,
+  hideViewSwitch = false,
+  summaryViewLabel,
 }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
@@ -68,13 +87,17 @@ function EventsToolbar({
     };
   }, [openMenu, setOpenMenu]);
 
-  const viewLabel = activeTab === 'schedule' ? 'Schedule' : 'Ledger';
+  const viewLabel =
+    summaryViewLabel ?? (activeTab === 'schedule' ? 'Schedule' : 'Ledger');
   const timelineLabel =
     filter === 'upcoming' ? 'Upcoming' : filter === 'past' ? 'Past' : 'All';
   const selectedBand =
     bandFilter === 'all'
       ? 'All bands'
-      : bandOptions.find((b) => b.id === bandFilter)?.name || 'All bands';
+      : (() => {
+          const b = bandOptions.find((x) => x.id === bandFilter);
+          return b ? bandOptionLabel(b) : 'All bands';
+        })();
 
   return (
     <div ref={rootRef}>
@@ -90,6 +113,7 @@ function EventsToolbar({
           />
         }
       >
+      {!hideViewSwitch && (
       <div
         className="events-toolbar-group"
         onMouseEnter={cancelCloseTimer}
@@ -129,6 +153,7 @@ function EventsToolbar({
           </div>
         )}
       </div>
+      )}
 
       <div
         className="events-toolbar-group"
@@ -206,19 +231,34 @@ function EventsToolbar({
             >
               All
             </button>
-            {bandOptions.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                className={`events-tool btn-filter ${bandFilter === b.id ? 'events-tool-active' : ''}`}
-                onClick={() => {
-                  setBandFilter(b.id);
-                  setOpenMenu(null);
-                }}
-              >
-                {short(b.name)}
-              </button>
-            ))}
+            {bandOptions.map((b) => {
+              const accent = b.color?.trim() || '#64748b';
+              const selected = bandFilter === b.id;
+              const label = bandOptionLabel(b);
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  className={`events-tool btn-filter events-tool--band ${selected ? 'events-tool-band--selected' : ''}`}
+                  style={{
+                    background: selected
+                      ? `linear-gradient(180deg, ${hexToRgba(accent, 0.22)} 0%, ${hexToRgba(accent, 0.09)} 100%)`
+                      : `linear-gradient(180deg, ${hexToRgba(accent, 0.14)} 0%, ${hexToRgba(accent, 0.05)} 100%)`,
+                    color: '#e5e7eb',
+                    borderLeft: `3px solid ${accent}`,
+                    boxShadow: selected
+                      ? `inset 0 0 0 1px rgba(0,0,0,0.45), 0 0 0 1px ${hexToRgba(accent, 0.85)}, 0 0 0 1px ${hexToRgba(accent, 0.35)}, 0 2px 14px ${hexToRgba(accent, 0.28)}`
+                      : `inset 0 2px 4px rgba(0,0,0,0.35)`,
+                  }}
+                  onClick={() => {
+                    setBandFilter(b.id);
+                    setOpenMenu(null);
+                  }}
+                >
+                  {short(label)}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

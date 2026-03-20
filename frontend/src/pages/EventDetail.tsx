@@ -10,6 +10,7 @@ import EventLedgerActions from '../components/EventLedgerActions';
 import StatusBlock from '../components/StatusBlock';
 import TabSwitch from '../components/TabSwitch';
 import { useEventPageData } from '../hooks/useEventPageData';
+import { displayBandName } from '../utils/bandDisplay';
 
 function EventDetail() {
   const { id } = useParams();
@@ -290,7 +291,7 @@ function EventDetail() {
       <EventHeaderMeta
         activeTab={activeTab}
         title={data.title}
-        bandName={data.band_name}
+        bandName={displayBandName(data.band_name, data.band_is_solo)}
         venueName={data.venue_name}
         dateStr={dateStr}
         city={data.city}

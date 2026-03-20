@@ -7,10 +7,20 @@ export type CurrentUser = {
   localCurrency?: string;
 };
 
+/** Bands returned from GET /api/bands (session user). */
+export type AppBandSummary = {
+  id: number;
+  name: string;
+  color?: string | null;
+  is_solo?: number | null;
+};
+
 export type UpcomingEvent = {
   id: number;
   band_id: number;
   band_name: string;
+  /** Personal band — show as "me" in UI */
+  band_is_solo?: 0 | 1;
   band_color?: string | null;
   event_date: string;
   venue_name: string | null;
@@ -29,6 +39,7 @@ export type LedgerEvent = {
   date_id: number;
   band_id: number;
   band_name: string;
+  band_is_solo?: 0 | 1;
   band_color?: string | null;
   event_date: string;
   title: string | null;
@@ -60,6 +71,7 @@ export type EventDetailData = {
   id: number;
   band_id: number;
   band_name: string;
+  band_is_solo?: 0 | 1;
   band_color: string | null;
   event_date: string;
   title: string | null;

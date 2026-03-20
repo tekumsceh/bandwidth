@@ -458,6 +458,129 @@ router.get('/patch/:bandId/default', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Resolve patch JSON for a gig date: optional per-date binding to a named save, else band default.
+ * Client should still force UI to Input + ch 1–8 after applying `data` (see frontend).
+ */
+router.get('/patch/:bandId/for-date/:dateId', async (req: Request, res: Response) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const bandId = Number(req.params.bandId);
+  const dateId = Number(req.params.dateId);
+  if (!Number.isFinite(bandId) || !Number.isFinite(dateId)) {
+    return res.status(400).json({ error: 'Invalid ids' });
+  }
+  if (!(await requireBandRead(req, res, bandId, user.id))) return;
+
+  try {
+    const [dateRows] = await pool.query(
+      `SELECT id FROM dates WHERE id = ? AND band_id = ? LIMIT 1`,
+      [dateId, bandId],
+    );
+    if (!(dateRows as any[])[0]) {
+      return res.status(404).json({ error: 'Date not found for this band' });
+    }
+
+    const [bindRows] = await pool.query(
+      `SELECT io_patch_save_id FROM date_io_patch_bindings WHERE date_id = ? AND band_id = ? LIMIT 1`,
+      [dateId, bandId],
+    );
+    const boundSaveId = Number((bindRows as any[])[0]?.io_patch_save_id);
+    if (Number.isFinite(boundSaveId) && boundSaveId > 0) {
+      const [saveRows] = await pool.query(
+        `SELECT id, name, data_json
+         FROM io_patch_saves
+         WHERE id = ? AND band_id = ?
+         LIMIT 1`,
+        [boundSaveId, bandId],
+      );
+      const srow = (saveRows as any[])[0];
+      if (srow) {
+        return res.json({
+          source: 'bound',
+          saveId: srow.id,
+          name: srow.name,
+          data: JSON.parse(srow.data_json || '{}'),
+        });
+      }
+    }
+
+    const [defRows] = await pool.query(
+      `SELECT id, name, data_json
+       FROM io_patch_saves
+       WHERE band_id = ? AND is_default = 1
+       LIMIT 1`,
+      [bandId],
+    );
+    const drow = (defRows as any[])[0];
+    if (drow) {
+      return res.json({
+        source: 'default',
+        saveId: drow.id,
+        name: drow.name,
+        data: JSON.parse(drow.data_json || '{}'),
+      });
+    }
+
+    return res.json({ source: 'empty', saveId: null, name: null, data: {} });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Get patch for date error', err);
+    res.status(500).json({ error: 'Failed to load patch for date' });
+  }
+});
+
+/** Assign a saved patch (or clear) for a specific gig date — owner/admin. */
+router.post('/patch/:bandId/for-date/:dateId', async (req: Request, res: Response) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const bandId = Number(req.params.bandId);
+  const dateId = Number(req.params.dateId);
+  const saveIdRaw = req.body?.saveId;
+  const saveId = saveIdRaw === null || saveIdRaw === undefined || saveIdRaw === '' ? null : Number(saveIdRaw);
+  if (!Number.isFinite(bandId) || !Number.isFinite(dateId)) {
+    return res.status(400).json({ error: 'Invalid ids' });
+  }
+  if (!(await requireBandRead(req, res, bandId, user.id))) return;
+  const manager = await canManageBand(bandId, user.id);
+  if (!manager) return res.status(403).json({ error: 'Only owner/admin can set patch for a date' });
+
+  try {
+    const [dateRows] = await pool.query(
+      `SELECT id FROM dates WHERE id = ? AND band_id = ? LIMIT 1`,
+      [dateId, bandId],
+    );
+    if (!(dateRows as any[])[0]) {
+      return res.status(404).json({ error: 'Date not found for this band' });
+    }
+
+    if (saveId == null || !Number.isFinite(saveId)) {
+      await pool.query(`DELETE FROM date_io_patch_bindings WHERE date_id = ?`, [dateId]);
+      return res.json({ ok: true, cleared: true });
+    }
+
+    const [saveRows] = await pool.query(
+      `SELECT id FROM io_patch_saves WHERE id = ? AND band_id = ? LIMIT 1`,
+      [saveId, bandId],
+    );
+    if (!(saveRows as any[])[0]) {
+      return res.status(404).json({ error: 'Patch save not found for this band' });
+    }
+
+    await pool.query(
+      `INSERT INTO date_io_patch_bindings (date_id, band_id, io_patch_save_id)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE io_patch_save_id = VALUES(io_patch_save_id), band_id = VALUES(band_id)`,
+      [dateId, bandId, saveId],
+    );
+    res.json({ ok: true, saveId });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Set patch for date error', err);
+    res.status(500).json({ error: 'Failed to set patch for date' });
+  }
+});
+
 router.get('/patch/:bandId/:saveId', async (req: Request, res: Response) => {
   const user = await requireUser(req, res);
   if (!user) return;

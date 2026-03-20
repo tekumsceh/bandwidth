@@ -23,13 +23,17 @@ export type IoPatchPersistedState = {
   outputChannelLR: Record<number, string>;
 };
 
-function key(bandId: number) {
+function keyBand(bandId: number) {
   return `${STORAGE_PREFIX}${bandId}`;
+}
+
+function keyForBandOrDate(bandId: number, dateId?: number | null) {
+  return dateId != null ? `${STORAGE_PREFIX}${bandId}-date-${dateId}` : keyBand(bandId);
 }
 
 export function loadIoPatchState(bandId: number): IoPatchPersistedState | null {
   try {
-    const raw = localStorage.getItem(key(bandId));
+    const raw = localStorage.getItem(keyBand(bandId));
     if (!raw) return null;
     return JSON.parse(raw) as IoPatchPersistedState;
   } catch {
@@ -57,9 +61,17 @@ export function isEmptyPatch(state: IoPatchPersistedState): boolean {
   return true;
 }
 
-export function saveIoPatchState(bandId: number, state: IoPatchPersistedState): void {
+/**
+ * Persist draft. Use `dateId` when the I/O page is opened for a gig so edits
+ * don't overwrite the band-wide draft stored under the band key only.
+ */
+export function saveIoPatchState(
+  bandId: number,
+  state: IoPatchPersistedState,
+  dateId?: number | null,
+): void {
   try {
-    localStorage.setItem(key(bandId), JSON.stringify(state));
+    localStorage.setItem(keyForBandOrDate(bandId, dateId), JSON.stringify(state));
   } catch {
     // quota exceeded or similar
   }

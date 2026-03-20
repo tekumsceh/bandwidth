@@ -297,5 +297,20 @@ export async function ensureV2Schema() {
       CONSTRAINT fk_io_patch_saves_user FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
   );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS date_io_patch_bindings (
+      date_id INT(10) UNSIGNED NOT NULL,
+      band_id INT(10) UNSIGNED NOT NULL,
+      io_patch_save_id BIGINT UNSIGNED NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+      PRIMARY KEY (date_id),
+      KEY idx_date_io_patch_bindings_band (band_id),
+      CONSTRAINT fk_date_io_patch_bindings_date FOREIGN KEY (date_id) REFERENCES dates(id) ON DELETE CASCADE,
+      CONSTRAINT fk_date_io_patch_bindings_band FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE,
+      CONSTRAINT fk_date_io_patch_bindings_save FOREIGN KEY (io_patch_save_id) REFERENCES io_patch_saves(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
 }
 

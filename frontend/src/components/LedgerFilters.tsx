@@ -1,6 +1,9 @@
+import { displayBandName } from '../utils/bandDisplay';
+
 type LedgerEvent = {
   band_id: number;
   band_name: string;
+  band_is_solo?: 0 | 1;
 };
 
 type LedgerBand = {
@@ -55,18 +58,23 @@ function LedgerFilters({
           >
             All bands
           </button>
-          {Array.from(new Map(ledgerEvents.map((ev) => [ev.band_id, ev.band_name])).entries()).map(
-            ([id, name]) => (
-              <button
-                key={id}
-                type="button"
-                className={`tab-button btn-filter ${ledgerBandFilter === id ? 'active' : ''}`}
-                onClick={() => setLedgerBandFilter(id as number)}
-              >
-                {short(name as string)}
-              </button>
-            ),
-          )}
+          {Array.from(
+            new Map(
+              ledgerEvents.map((ev) => [
+                ev.band_id,
+                { name: displayBandName(ev.band_name, ev.band_is_solo) },
+              ]),
+            ).entries(),
+          ).map(([id, { name }]) => (
+            <button
+              key={id}
+              type="button"
+              className={`tab-button btn-filter ${ledgerBandFilter === id ? 'active' : ''}`}
+              onClick={() => setLedgerBandFilter(id as number)}
+            >
+              {short(name)}
+            </button>
+          ))}
         </div>
       )}
     </>

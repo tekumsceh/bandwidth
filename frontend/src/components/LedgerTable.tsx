@@ -1,7 +1,10 @@
+import { displayBandName } from '../utils/bandDisplay';
+
 type LedgerEvent = {
   date_id: number;
   band_id: number;
   band_name: string;
+  band_is_solo?: 0 | 1;
   event_date: string;
   venue_name: string | null;
   city: string | null;
@@ -77,7 +80,7 @@ function LedgerTable({
                 <td className="ledger-cell">
                   <span className="ledger-link">{dateLabel}</span>
                 </td>
-                <td className="ledger-cell">{ev.band_name}</td>
+                <td className="ledger-cell">{displayBandName(ev.band_name, ev.band_is_solo)}</td>
                 <td className="ledger-cell">
                   {ev.venue_name || '—'} ({ev.city || '—'})
                 </td>

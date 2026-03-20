@@ -1,5 +1,8 @@
+import { displayBandName } from '../utils/bandDisplay';
+
 type EventDetailData = {
   band_name: string;
+  band_is_solo?: 0 | 1;
   city: string | null;
   country: string | null;
   venue_name: string | null;
@@ -40,7 +43,7 @@ function EventInfoSection({ data, lineup, dateStr, formatTime }: Props) {
           <ul className="detail-list">
             <li>
               <span>Band:</span>
-              <strong>{data.band_name}</strong>
+              <strong>{displayBandName(data.band_name, data.band_is_solo)}</strong>
             </li>
             <li>
               <span>Date:</span>

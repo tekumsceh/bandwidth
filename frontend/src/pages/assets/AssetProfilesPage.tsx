@@ -22,9 +22,12 @@ type AssetItem = {
 export default function AssetProfilesPage({ moduleKey, title }: Props) {
   const [searchParams] = useSearchParams();
   const initialBandId = Number(searchParams.get('bandId') || NaN);
+  const initialDateId = searchParams.get('dateId')?.trim() ?? '';
   const [bands, setBands] = useState<BandOption[]>([]);
   const [bandId, setBandId] = useState<number | null>(null);
-  const [tab, setTab] = useState<'personal' | 'band' | 'combined' | 'invoke'>('personal');
+  const [tab, setTab] = useState<'personal' | 'band' | 'combined' | 'invoke'>(() =>
+    initialDateId ? 'invoke' : 'personal',
+  );
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [items, setItems] = useState<AssetItem[]>([]);
@@ -33,7 +36,15 @@ export default function AssetProfilesPage({ moduleKey, title }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [newProfileName, setNewProfileName] = useState('');
   const [newItemLabel, setNewItemLabel] = useState('');
-  const [dateId, setDateId] = useState('');
+  const [dateId, setDateId] = useState(initialDateId);
+
+  useEffect(() => {
+    const d = searchParams.get('dateId')?.trim() ?? '';
+    if (d) {
+      setDateId(d);
+      setTab('invoke');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadBands = async () => {

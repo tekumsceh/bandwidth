@@ -70,6 +70,11 @@ const Icon = (C: React.ComponentType<{ size?: number }>) => ({ size = 32 }: { si
   <span style={{ flexShrink: 0, display: 'inline-flex' }}><C size={size} /></span>
 );
 
+/** Text-only instrument (no icon), renders label in same swatch style */
+const TextOnlyIcon = (text: string) => ({ size = 32 }: { size?: number }) => (
+  <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.45), fontWeight: 700 }}>{text}</span>
+);
+
 const SpeakerWithLetter = ({ letter, size = 32 }: { letter: string; size?: number }) => (
   <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'inherit' }}>
     <span style={{ flexShrink: 0 }}><GiSpeaker size={size} /></span>
@@ -81,11 +86,13 @@ type InstrumentDef = { id: string; label: string; shortLabel: string; Icon: (p: 
 
 const BEHRINGER_MAP: Record<number, string> = {
   2: 'kick', 3: 'kick',
+  4: 'snare', 5: 'snare',
   6: 'tom-high', 7: 'tom-mid', 8: 'tom-floor',
   9: 'hihat', 13: 'conga-high', 14: 'conga-low',
   17: 'bass', 20: 'elec-guitar', 21: 'elec-guitar', 22: 'acoustic-guitar', 23: 'acoustic-guitar',
   27: 'keyboard', 30: 'keyboard',
   35: 'trumpet', 36: 'trombone', 37: 'saxophone', 38: 'clarinet',
+  54: 'xlr',
 };
 
 const GUITAR_MAP: Record<string, string> = {
@@ -99,8 +106,11 @@ const DEFAULT_INSTRUMENTS: InstrumentDef[] = [
   { id: 'tom-mid', label: 'Mid tom', shortLabel: 'MdTom', Icon: Icon(GiDrum) },
   { id: 'tom-floor', label: 'Floor tom', shortLabel: 'FlTom', Icon: Icon(GiDrum) },
   { id: 'hihat', label: 'Hi-hat', shortLabel: 'HiHat', Icon: ({ size = 32 }) => <span style={{ flexShrink: 0 }}><FaDrumSteelpan size={size} /></span> },
+  { id: 'snare', label: 'Snare', shortLabel: 'Snare', Icon: TextOnlyIcon('Snare') },
   { id: 'oh-l', label: 'Overhead L', shortLabel: 'OH L', Icon: Icon(GiMicrophone) },
   { id: 'oh-r', label: 'Overhead R', shortLabel: 'OH R', Icon: Icon(GiMicrophone) },
+  { id: 'di-box', label: 'DI box', shortLabel: 'DI', Icon: TextOnlyIcon('DI') },
+  { id: 'xlr', label: 'XLR', shortLabel: 'XLR', Icon: ({ size = 32 }) => <span style={{ flexShrink: 0 }}><BehringerIcon id={54} size={size} /></span> },
   { id: 'elec-guitar', label: 'Electric guitar', shortLabel: 'El Gtr', Icon: Icon(GiGuitar) },
   { id: 'bass', label: 'Bass guitar', shortLabel: 'Bass', Icon: Icon(GiGuitarBassHead) },
   { id: 'acoustic-guitar', label: 'Acoustic guitar', shortLabel: 'Ac Gtr', Icon: Icon(GiGuitar) },

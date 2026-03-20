@@ -1,6 +1,5 @@
-/* BANDMIXER-style I/O patch — skeuomorphic dark theme */
-
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap');
+/* BANDMIXER-style I/O patch — skeuomorphic dark theme (Roboto loaded in App.css)
+ * Strip width: --io-patch-strip-width in App.css :root */
 
 .io-patch-page {
   display: flex;
@@ -8,43 +7,72 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #121212;
-  background-image: radial-gradient(ellipse at top, #1a1a1a 0%, #121212 70%);
+  background: transparent;
   color: #e5e7eb;
-  font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+  font-family: inherit;
   padding: 0;
 }
 
-.io-patch-header {
+/* Framed workspace inside app shell (same idea as dashboard overview well) */
+.io-patch-workspace {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #2a2a2a;
-  background: linear-gradient(180deg, #1a1a1a 0%, #121212 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+  background: linear-gradient(180deg, #161616 0%, #101010 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
-.io-patch-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: #e5e7eb;
-}
-
-.io-patch-sub {
-  margin-top: 0.2rem;
-  font-size: 0.75rem;
-  color: #9ca3af;
-  letter-spacing: 0.08em;
-}
-
-.io-patch-header-meta {
+.io-patch-workspace-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem 0.75rem;
+  flex-shrink: 0;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid #2a2a2a;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.io-patch-workspace-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+}
+
+.io-patch-workspace-hint {
+  font-size: 0.65rem;
+  color: #737373;
+  letter-spacing: 0.04em;
+}
+
+.io-patch-workspace-scope {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #a3a3a3;
+}
+
+.io-patch-workspace-toolbar-spacer {
+  flex: 1;
+  min-width: 0.5rem;
+}
+
+.io-patch-band-select--toolbar {
+  margin-left: 0.15rem;
+}
+
+.io-patch-back--toolbar {
+  font-size: 0.62rem !important;
+  letter-spacing: 0.1em !important;
+  margin: 0 !important;
 }
 
 .io-patch-band-select {
@@ -73,6 +101,15 @@
   text-align: center;
   color: #6b7280;
   font-size: 0.9rem;
+}
+
+.io-patch-loading--workspace {
+  padding: 2rem 1rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
 }
 
 .io-patch-body {
@@ -214,9 +251,9 @@
   flex-direction: column;
   align-items: stretch;
   gap: 0.35rem;
-  width: 72px;
-  min-width: 72px;
-  max-width: 72px;
+  width: var(--io-patch-strip-width);
+  min-width: var(--io-patch-strip-width);
+  max-width: var(--io-patch-strip-width);
   padding: calc(0.4rem + 2px);
   border-radius: 10px;
   flex-shrink: 0;
@@ -328,12 +365,15 @@
   flex-direction: column;
   align-items: stretch;
   gap: 0.35rem;
-  width: 72px;
-  min-width: 72px;
-  max-width: 72px;
+  box-sizing: border-box;
+  width: var(--io-patch-strip-width);
+  min-width: var(--io-patch-strip-width);
+  max-width: var(--io-patch-strip-width);
   padding: 0.4rem;
   border-radius: 10px;
   flex-shrink: 0;
+  /* Do NOT set overflow:hidden here — I/O pickers (color, mic, …) are positioned
+     inside the strip and must extend outside its box. Gig strips add overflow below. */
 }
 
 .io-patch-strip.skipped {
@@ -409,9 +449,9 @@
 }
 
 .io-patch-skip-btn.on {
-  background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
-  border-color: #4a4a4a;
-  color: #e5e7eb;
+  background: linear-gradient(180deg, #7f1d1d 0%, #5c1515 100%);
+  border-color: #b91c1c;
+  color: #fecaca;
 }
 
 .io-patch-link-wrap {
@@ -536,6 +576,9 @@
 
 .io-patch-ch-num-wrap {
   position: relative;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .io-patch-ch-num {
@@ -543,31 +586,35 @@
   align-items: center;
   justify-content: center;
   gap: 0;
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 28px;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
-  padding: 0.3rem;
+  letter-spacing: 0.03em;
+  padding: 0.22rem 0.18rem;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   background: linear-gradient(180deg, #252525 0%, #1e1e1e 100%);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: all 0.15s;
+  overflow: hidden;
 }
 
 .io-patch-strips-input .io-patch-ch-num {
   color: #ff8c00;
   border: 2px solid #ff8c00;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(255, 140, 0, 0.15);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 0 6px rgba(255, 140, 0, 0.12);
 }
 
 .io-patch-strips-output .io-patch-ch-num {
   color: #00d4ff;
   border: 2px solid #00d4ff;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(0, 212, 255, 0.15);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 0 6px rgba(0, 212, 255, 0.12);
 }
 
 .io-patch-ch-num:hover {
@@ -578,6 +625,33 @@
   color: #f8fafc;
   font-weight: 800;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Gig dashboard: date “channel” — month above day, stays inside strip width (no horizontal bleed) */
+.io-patch-ch-num.io-patch-gig-date-pill {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.08rem;
+  padding: 0.18rem 0.1rem;
+  min-height: 28px;
+  letter-spacing: 0;
+}
+
+.io-patch-gig-date-mo {
+  font-size: 0.46rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.05;
+  opacity: 0.88;
+}
+
+.io-patch-gig-date-day {
+  font-size: 0.66rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 .io-patch-select-wrap {
@@ -620,6 +694,26 @@
   outline: none;
 }
 
+.io-patch-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  font-size: 0.52rem;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.io-patch-instrument-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  color: inherit;
+}
+
 .io-patch-select-backdrop {
   position: fixed;
   inset: 0;
@@ -650,6 +744,11 @@
   right: 100%;
   left: auto;
   margin-right: 2px;
+}
+
+/* Mic stand: wider dropdown so stand names fit on one line */
+.io-patch-stand-dropdown {
+  min-width: 150px;
 }
 
 /* Mic picker: narrow, search input replaces icon in same space */
@@ -810,6 +909,26 @@
   opacity: 0.9;
 }
 
+/* Selected value text (e.g. mic name) — show when chosen, truncate if long */
+.io-patch-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  font-size: 0.52rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.io-patch-instrument-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .io-patch-color-backdrop {
   position: fixed;
   inset: 0;
@@ -910,6 +1029,19 @@
   font-size: 0.85rem;
   font-weight: 700;
   opacity: 0.6;
+}
+
+.io-patch-instrument-swatch-text {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.io-patch-instrument-swatch-text {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .io-patch-instrument-backdrop {
@@ -1331,6 +1463,43 @@
   box-shadow: 0 0 12px rgba(255, 140, 0, 0.2);
 }
 
+.io-patch-load-item-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  margin-bottom: 0.2rem;
+}
+
+.io-patch-load-item-row .io-patch-load-item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.io-patch-load-pin {
+  flex-shrink: 0;
+  min-width: 2.75rem;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.io-patch-load-pin:hover:not(:disabled) {
+  border-color: rgba(255, 140, 0, 0.55);
+  color: #ff8c00;
+}
+
+.io-patch-load-pin:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .io-patch-load-list {
   max-height: 160px;
   overflow-y: auto;
@@ -1481,4 +1650,237 @@
   width: 40px;
   height: 40px;
   color: #e5e7eb;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dashboard gig strips — same shell as .io-patch-strip on the I/O patch page   */
+/* -------------------------------------------------------------------------- */
+
+.io-patch-strip.io-patch-gig-strip {
+  cursor: default;
+  /* Clip only on dashboard gig strips (no in-strip popovers) */
+  overflow: hidden;
+}
+
+/* Squarer corners on gig strip controls (matches SC/ST / asset buttons) */
+.io-patch-strip.io-patch-gig-strip .io-patch-ch-num,
+.io-patch-strip.io-patch-gig-strip .io-patch-gig-status,
+.io-patch-strip.io-patch-gig-strip .io-patch-gig-field {
+  border-radius: 4px;
+}
+
+.io-patch-strip.io-patch-gig-strip:hover {
+  border-color: #525252;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(249, 115, 22, 0.25);
+}
+
+.io-patch-gig-strip-main {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  /* Match .io-patch-strip { gap: 0.35rem } between stacked controls */
+  gap: 0.35rem;
+  cursor: pointer;
+  border-radius: 6px;
+  outline: none;
+}
+
+.io-patch-gig-strip-main:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+.io-patch-gig-strip-main--inert {
+  cursor: default;
+}
+
+.io-patch-ch-num.io-patch-ch-num--display {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Read-only time tiles — same as .io-patch-select-btn, no hover shift */
+.io-patch-select-btn.io-patch-select-btn--readonly {
+  cursor: default;
+  pointer-events: none;
+}
+
+.io-patch-select-btn.io-patch-select-btn--readonly:hover {
+  background: linear-gradient(180deg, #2a2a2a 0%, #1e1e1e 50%, #252525 100%);
+  border-color: #3a3a3a;
+  color: #f1f5f9;
+}
+
+/* City / venue lines — no “City” / “Venue” labels */
+.io-patch-gig-field {
+  min-height: 14px;
+  padding: 0.12rem 0.22rem;
+  font-size: 0.48rem;
+}
+
+.io-patch-gig-status {
+  font-size: 0.38rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 0.12rem 0.2rem;
+  border-radius: 6px;
+  border: 1px solid #3a3a3a;
+  line-height: 1.15;
+  color: #e5e7eb;
+  background: #0d0d0d;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.io-patch-gig-status--confirmed {
+  border-color: rgba(74, 222, 128, 0.55);
+  color: #4ade80;
+}
+
+.io-patch-gig-status--pending {
+  border-color: rgba(250, 204, 21, 0.55);
+  color: #facc15;
+}
+
+.io-patch-gig-status--postponed {
+  border-color: rgba(96, 165, 250, 0.55);
+  color: #93c5fd;
+}
+
+.io-patch-gig-status--done {
+  border-color: rgba(148, 163, 184, 0.45);
+  color: #cbd5e1;
+}
+
+.io-patch-gig-status--other {
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fca5a5;
+}
+
+.io-patch-gig-status--empty {
+  opacity: 0.45;
+}
+
+.io-patch-gig-status--add {
+  border-color: rgba(249, 115, 22, 0.55);
+  color: #fb923c;
+}
+
+.io-patch-gig-asset-links {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  align-self: stretch;
+  width: 100%;
+  gap: 0.12rem;
+  flex-shrink: 0;
+  padding-top: 0.12rem;
+  margin-top: 0;
+  box-sizing: border-box;
+}
+
+.io-patch-gig-asset-links .io-patch-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.1rem 0.2rem;
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  line-height: 1.15;
+  box-sizing: border-box;
+  border-radius: 4px;
+}
+
+.io-patch-gig-asset-links .io-patch-link-btn--io {
+  border-color: rgba(255, 140, 0, 0.45);
+  color: #fdba74;
+}
+
+.io-patch-gig-asset-links .io-patch-link-btn--io:hover {
+  border-color: #ff8c00;
+  color: #fff7ed;
+}
+
+.io-patch-strip.io-patch-gig-strip--add {
+  cursor: pointer;
+}
+
+.io-patch-strip.io-patch-gig-strip--add:hover {
+  border-color: rgba(249, 115, 22, 0.55);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(249, 115, 22, 0.35);
+}
+
+.io-patch-strip.io-patch-gig-strip--add:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+.io-patch-ch-num.io-patch-gig-date-pill--add {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.14rem;
+  overflow: hidden;
+}
+
+.io-patch-gig-add-icon {
+  width: 14px;
+  height: 14px;
+  color: #fb923c;
+  opacity: 0.95;
+  flex-shrink: 0;
+}
+
+/* Gig dashboard: SC / ST label above time — full strip width, squarer corners */
+.io-patch-strip.io-patch-gig-strip .io-patch-select-wrap {
+  width: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.io-patch-select-btn.io-patch-select-btn--readonly.io-patch-gig-time-compact {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  height: auto;
+  padding: 0.15rem 0.2rem;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.io-patch-gig-time-tag {
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.io-patch-gig-time-compact .io-patch-select-value {
+  font-size: 0.48rem;
+  line-height: 1.1;
+}
+
+.io-patch-gig-time-compact.io-patch-gig-time-sc .io-patch-select-value {
+  color: #4ade80;
+}
+
+.io-patch-gig-time-compact.io-patch-gig-time-show .io-patch-select-value {
+  color: #ff8c00;
 }
