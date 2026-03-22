@@ -1,244 +1,16 @@
 /* BANDMIXER-style I/O patch — skeuomorphic dark theme (Roboto loaded in App.css)
- * Strip width: --io-patch-strip-width in App.css :root */
+ * Strip system: --strip-width in App.css :root; see styles/strip/strip-base.css
+ * Modular slice: styles/io-patch/ (workspace + hub bridge) */
 
-.io-patch-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  background: transparent;
-  color: #e5e7eb;
-  font-family: inherit;
-  padding: 0;
-}
+@import '../../styles/io-patch/index.css';
 
-/* Framed workspace inside app shell (same idea as dashboard overview well) */
-.io-patch-workspace {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid #2a2a2a;
-  background: linear-gradient(180deg, #161616 0%, #101010 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 4px 24px rgba(0, 0, 0, 0.35);
-}
-
-.io-patch-workspace-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-  flex-shrink: 0;
-  padding: 0.45rem 0.65rem;
-  border-bottom: 1px solid #2a2a2a;
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.io-patch-workspace-label {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #a3a3a3;
-}
-
-.io-patch-workspace-hint {
-  font-size: 0.65rem;
-  color: #737373;
-  letter-spacing: 0.04em;
-}
-
-.io-patch-workspace-scope {
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: #a3a3a3;
-}
-
-.io-patch-workspace-toolbar-spacer {
-  flex: 1;
-  min-width: 0.5rem;
-}
-
-.io-patch-band-select--toolbar {
-  margin-left: 0.15rem;
-}
-
-.io-patch-back--toolbar {
-  font-size: 0.62rem !important;
-  letter-spacing: 0.1em !important;
-  margin: 0 !important;
-}
-
-.io-patch-band-select {
-  background: #1e1e1e;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  color: #f1f5f9;
-  padding: 0.4rem 0.6rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.io-patch-band-select:focus {
-  outline: none;
-  border-color: #4a4a4a;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-}
-
-.io-patch-back {
-  flex-shrink: 0;
-}
-
-.io-patch-loading {
-  padding: 3rem;
-  text-align: center;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.io-patch-loading--workspace {
-  padding: 2rem 1rem;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-}
-
-.io-patch-body {
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* Stacked layout: patch table below strips, collapsible */
-.io-patch-body.io-patch-body-stacked {
-  flex-direction: column;
-}
-
-.io-patch-body.io-patch-body-stacked .io-patch-content {
-  flex: 0 0 auto;
-}
-
-.io-patch-body.io-patch-body-stacked .io-patch-aside {
-  flex: 0 0 auto;
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-  margin: 0;
-  max-height: none;
-}
-
-.io-patch-content {
-  flex: 1;
-  padding: 1rem 1.25rem;
-  overflow-x: auto;
-  min-width: 0;
-}
-
-.io-patch-action-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid #2a2a2a;
-}
-
-.io-patch-action-dropdown-wrap {
-  position: relative;
-}
-
-.io-patch-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  background: #1e1e1e;
-  border: 2px solid #3a3a3a;
-  border-radius: 4px;
-  color: #9ca3af;
-  cursor: pointer;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.15s;
-}
-
-.io-patch-action-btn:hover,
-.io-patch-action-btn.active {
-  background: #252525;
-  border-color: #4a4a4a;
-  color: #e5e7eb;
-}
-
-.io-patch-lr-toggle {
-  display: flex;
-  gap: 0.25rem;
-  width: 100%;
-  min-width: 0;
-}
-
-.io-patch-lr-btn {
-  flex: 1;
-  min-height: 28px;
-  padding: 0.25rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  border-radius: 8px;
-  border: 2px solid #3a3a3a;
-  background: linear-gradient(180deg, #252525 0%, #1e1e1e 100%);
-  color: #6b7280;
-  cursor: pointer;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: all 0.15s;
-}
-
-.io-patch-lr-btn:hover {
-  background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
-  border-color: #4a4a4a;
-  color: #9ca3af;
-}
-
-.io-patch-lr-btn.on {
-  background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
-  border-color: #4a4a4a;
-  color: #e5e7eb;
-}
-
-.io-patch-section {
-  margin-bottom: 1.5rem;
-}
-
-.io-patch-section:last-child {
-  margin-bottom: 0;
-}
-
-.io-patch-section-title {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #9ca3af;
-}
-
-.io-patch-strips {
+.strip-row {
   display: flex;
   gap: 0.5rem;
   flex-wrap: nowrap;
 }
 
-.io-patch-strips-row {
+.strip-layout-row {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
@@ -246,14 +18,14 @@
 }
 
 /* Selector strip — same box as channel strips, no border/background, padding compensates for removed 2px border */
-.io-patch-toolbar {
+.io-toolbar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0.35rem;
-  width: var(--io-patch-strip-width);
-  min-width: var(--io-patch-strip-width);
-  max-width: var(--io-patch-strip-width);
+  width: var(--strip-width);
+  min-width: var(--strip-width);
+  max-width: var(--strip-width);
   padding: calc(0.4rem + 2px);
   border-radius: 10px;
   flex-shrink: 0;
@@ -265,8 +37,8 @@
   justify-content: center;
   gap: 0.35rem;
   width: 100%;
-  min-height: 28px;
-  padding: 0.3rem;
+  min-height: 30px;
+  padding: 0.38rem 0.3rem;
   background: linear-gradient(180deg, #252525 0%, #1e1e1e 100%);
   border: 2px solid #3a3a3a;
   border-radius: 8px;
@@ -307,8 +79,8 @@
 
 .io-patch-range-btn {
   width: 100%;
-  min-height: 28px;
-  padding: 0.3rem 0.5rem;
+  min-height: 30px;
+  padding: 0.38rem 0.5rem;
   background: linear-gradient(180deg, #252525 0%, #1e1e1e 100%);
   border: 2px solid #3a3a3a;
   border-radius: 8px;
@@ -352,46 +124,13 @@
   box-shadow: inset 0 1px 2px rgba(0, 212, 255, 0.2), 0 0 10px rgba(0, 212, 255, 0.2);
 }
 
-/* Channel strips — neutral, no accent border */
-.io-patch-strips-input .io-patch-strip,
-.io-patch-strips-output .io-patch-strip {
-  background: #1e1e1e;
-  border: 2px solid #3a3a3a;
-  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.4);
-}
-
-.io-patch-strip {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.35rem;
-  box-sizing: border-box;
-  width: var(--io-patch-strip-width);
-  min-width: var(--io-patch-strip-width);
-  max-width: var(--io-patch-strip-width);
-  padding: 0.4rem;
-  border-radius: 10px;
-  flex-shrink: 0;
-  /* Do NOT set overflow:hidden here — I/O pickers (color, mic, …) are positioned
-     inside the strip and must extend outside its box. Gig strips add overflow below. */
-}
-
-.io-patch-strip.skipped {
-  opacity: 0.5;
-}
-
-.io-patch-strip-divider {
-  height: 4px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  border-radius: 2px;
-  margin: 0.1rem 0;
-}
+/* Strip shell (width, flex, border, bg): styles/strip/strip-base.css — .strip-frame */
 
 .io-patch-instrument-name {
   min-height: 18px;
   min-width: 0;
   padding: 0.2rem 0.3rem;
-  font-size: 0.52rem;
+  font-size: 0.56rem;
   color: #9ca3af;
   text-align: center;
   background: #252525;
@@ -605,13 +344,13 @@
   overflow: hidden;
 }
 
-.io-patch-strips-input .io-patch-ch-num {
+.strip-row--input .io-patch-ch-num {
   color: #ff8c00;
   border: 2px solid #ff8c00;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 0 6px rgba(255, 140, 0, 0.12);
 }
 
-.io-patch-strips-output .io-patch-ch-num {
+.strip-row--output .io-patch-ch-num {
   color: #00d4ff;
   border: 2px solid #00d4ff;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 0 6px rgba(0, 212, 255, 0.12);
@@ -628,7 +367,7 @@
 }
 
 /* Gig dashboard: date “channel” — month above day, stays inside strip width (no horizontal bleed) */
-.io-patch-ch-num.io-patch-gig-date-pill {
+.io-patch-ch-num.date-strip-pill {
   flex-direction: column;
   justify-content: center;
   gap: 0.08rem;
@@ -637,8 +376,8 @@
   letter-spacing: 0;
 }
 
-.io-patch-gig-date-mo {
-  font-size: 0.46rem;
+.date-strip-mo {
+  font-size: 0.5rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -646,8 +385,8 @@
   opacity: 0.88;
 }
 
-.io-patch-gig-date-day {
-  font-size: 0.66rem;
+.date-strip-day {
+  font-size: 0.7rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
@@ -719,6 +458,8 @@
   inset: 0;
   z-index: 10;
   cursor: default;
+  /* Let clicks reach other strip triggers; outside-close is handled in useIoPatchState (document capture). */
+  pointer-events: none;
 }
 
 .io-patch-select-dropdown {
@@ -1336,6 +1077,8 @@
   position: fixed;
   inset: 0;
   z-index: 99;
+  /* Pass clicks through to action bar / other controls; close is handled in IoPatchModals (document capture). */
+  pointer-events: none;
 }
 
 .io-patch-modal {
@@ -1352,7 +1095,8 @@
   top: 100%;
   left: 0;
   margin-top: 2px;
-  z-index: 100;
+  z-index: 101;
+  pointer-events: auto;
 }
 
 .io-patch-modal-body {
@@ -1653,47 +1397,47 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* Dashboard gig strips — same shell as .io-patch-strip on the I/O patch page   */
+/* Dashboard gig strips — same shell as .strip-frame on the I/O patch page   */
 /* -------------------------------------------------------------------------- */
 
-.io-patch-strip.io-patch-gig-strip {
+.strip-frame.date-strip {
   cursor: default;
   /* Clip only on dashboard gig strips (no in-strip popovers) */
   overflow: hidden;
 }
 
 /* Squarer corners on gig strip controls (matches SC/ST / asset buttons) */
-.io-patch-strip.io-patch-gig-strip .io-patch-ch-num,
-.io-patch-strip.io-patch-gig-strip .io-patch-gig-status,
-.io-patch-strip.io-patch-gig-strip .io-patch-gig-field {
+.strip-frame.date-strip .io-patch-ch-num,
+.strip-frame.date-strip .date-strip-status,
+.strip-frame.date-strip .date-strip-field {
   border-radius: 4px;
 }
 
-.io-patch-strip.io-patch-gig-strip:hover {
-  border-color: #525252;
-  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(249, 115, 22, 0.25);
+.strip-frame.date-strip:hover {
+  border-color: var(--strip-hover-border-color);
+  box-shadow: var(--strip-hover-box-shadow);
 }
 
-.io-patch-gig-strip-main {
+.date-strip-main {
   flex: 1;
   min-height: 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* Match .io-patch-strip { gap: 0.35rem } between stacked controls */
+  /* Match .strip-frame { gap: 0.35rem } between stacked controls */
   gap: 0.35rem;
   cursor: pointer;
   border-radius: 6px;
   outline: none;
 }
 
-.io-patch-gig-strip-main:focus-visible {
+.date-strip-main:focus-visible {
   outline: 2px solid #f97316;
   outline-offset: 2px;
 }
 
-.io-patch-gig-strip-main--inert {
+.date-strip-main--inert {
   cursor: default;
 }
 
@@ -1715,14 +1459,14 @@
 }
 
 /* City / venue lines — no “City” / “Venue” labels */
-.io-patch-gig-field {
+.date-strip-field {
   min-height: 14px;
   padding: 0.12rem 0.22rem;
-  font-size: 0.48rem;
+  font-size: 0.52rem;
 }
 
-.io-patch-gig-status {
-  font-size: 0.38rem;
+.date-strip-status {
+  font-size: 0.42rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-align: center;
@@ -1735,41 +1479,41 @@
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
 }
 
-.io-patch-gig-status--confirmed {
+.date-strip-status--confirmed {
   border-color: rgba(74, 222, 128, 0.55);
   color: #4ade80;
 }
 
-.io-patch-gig-status--pending {
+.date-strip-status--pending {
   border-color: rgba(250, 204, 21, 0.55);
   color: #facc15;
 }
 
-.io-patch-gig-status--postponed {
+.date-strip-status--postponed {
   border-color: rgba(96, 165, 250, 0.55);
   color: #93c5fd;
 }
 
-.io-patch-gig-status--done {
+.date-strip-status--done {
   border-color: rgba(148, 163, 184, 0.45);
   color: #cbd5e1;
 }
 
-.io-patch-gig-status--other {
+.date-strip-status--other {
   border-color: rgba(248, 113, 113, 0.45);
   color: #fca5a5;
 }
 
-.io-patch-gig-status--empty {
+.date-strip-status--empty {
   opacity: 0.45;
 }
 
-.io-patch-gig-status--add {
+.date-strip-status--add {
   border-color: rgba(249, 115, 22, 0.55);
   color: #fb923c;
 }
 
-.io-patch-gig-asset-links {
+.date-strip-asset-links {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1782,7 +1526,7 @@
   box-sizing: border-box;
 }
 
-.io-patch-gig-asset-links .io-patch-link-btn {
+.date-strip-asset-links .io-patch-link-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1790,8 +1534,8 @@
   max-width: 100%;
   min-width: 0;
   min-height: 0;
-  padding: 0.1rem 0.2rem;
-  font-size: 0.5rem;
+  padding: 0.12rem 0.2rem;
+  font-size: 0.54rem;
   font-weight: 700;
   text-decoration: none;
   text-align: center;
@@ -1800,31 +1544,47 @@
   border-radius: 4px;
 }
 
-.io-patch-gig-asset-links .io-patch-link-btn--io {
+.date-strip-asset-links .io-patch-link-btn--io {
   border-color: rgba(255, 140, 0, 0.45);
   color: #fdba74;
 }
 
-.io-patch-gig-asset-links .io-patch-link-btn--io:hover {
+.date-strip-asset-links .io-patch-link-btn--io:hover {
   border-color: #ff8c00;
   color: #fff7ed;
 }
 
-.io-patch-strip.io-patch-gig-strip--add {
+.date-strip-asset-links .io-patch-link-btn--disabled,
+.date-strip-asset-links .io-patch-link-btn--disabled.io-patch-link-btn--io {
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.42;
+  color: #6b7280;
+  border-color: #2f2f2f;
+  box-shadow: none;
+}
+
+.date-strip-asset-links .io-patch-link-btn--disabled:hover {
+  background: linear-gradient(180deg, #252525 0%, #1e1e1e 100%);
+  border-color: #2f2f2f;
+  color: #6b7280;
+}
+
+.strip-frame.date-strip--add {
   cursor: pointer;
 }
 
-.io-patch-strip.io-patch-gig-strip--add:hover {
-  border-color: rgba(249, 115, 22, 0.55);
-  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(249, 115, 22, 0.35);
+.strip-frame.date-strip--add:hover {
+  border-color: var(--strip-hover-add-border-color);
+  box-shadow: var(--strip-hover-add-box-shadow);
 }
 
-.io-patch-strip.io-patch-gig-strip--add:focus-visible {
+.strip-frame.date-strip--add:focus-visible {
   outline: 2px solid #f97316;
   outline-offset: 2px;
 }
 
-.io-patch-ch-num.io-patch-gig-date-pill--add {
+.io-patch-ch-num.date-strip-pill--add {
   flex-direction: row;
   align-items: center;
   justify-content: center;
@@ -1833,7 +1593,7 @@
   overflow: hidden;
 }
 
-.io-patch-gig-add-icon {
+.date-strip-add-icon {
   width: 14px;
   height: 14px;
   color: #fb923c;
@@ -1842,13 +1602,13 @@
 }
 
 /* Gig dashboard: SC / ST label above time — full strip width, squarer corners */
-.io-patch-strip.io-patch-gig-strip .io-patch-select-wrap {
+.strip-frame.date-strip .io-patch-select-wrap {
   width: 100%;
   align-self: stretch;
   box-sizing: border-box;
 }
 
-.io-patch-select-btn.io-patch-select-btn--readonly.io-patch-gig-time-compact {
+.io-patch-select-btn.io-patch-select-btn--readonly.date-strip-time-compact {
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -1863,8 +1623,8 @@
   box-sizing: border-box;
 }
 
-.io-patch-gig-time-tag {
-  font-size: 0.48rem;
+.date-strip-time-tag {
+  font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #9ca3af;
@@ -1872,15 +1632,15 @@
   line-height: 1;
 }
 
-.io-patch-gig-time-compact .io-patch-select-value {
-  font-size: 0.48rem;
+.date-strip-time-compact .io-patch-select-value {
+  font-size: 0.52rem;
   line-height: 1.1;
 }
 
-.io-patch-gig-time-compact.io-patch-gig-time-sc .io-patch-select-value {
+.date-strip-time-compact.date-strip-time-sc .io-patch-select-value {
   color: #4ade80;
 }
 
-.io-patch-gig-time-compact.io-patch-gig-time-show .io-patch-select-value {
+.date-strip-time-compact.date-strip-time-show .io-patch-select-value {
   color: #ff8c00;
 }

@@ -1,6 +1,31 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { apiUrl } from '../../../config/api';
 import { isEmptyPatch, type IoPatchPersistedState } from '../ioPatchStorage';
+
+/** Close when clicking outside modal content; keep action bar and other popups reachable in one click. */
+function useModalDismissOnOutside(onClose: () => void) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    let remove: (() => void) | undefined;
+    const t = window.setTimeout(() => {
+      const onMouseDown = (e: MouseEvent) => {
+        const raw = e.target;
+        const el = raw instanceof Element ? raw : raw instanceof Node ? raw.parentElement : null;
+        if (!el) return;
+        if (el.closest('[data-io-patch-popup]') || el.closest('.io-patch-action-bar')) return;
+        onCloseRef.current();
+      };
+      document.addEventListener('mousedown', onMouseDown, true);
+      remove = () => document.removeEventListener('mousedown', onMouseDown, true);
+    }, 0);
+    return () => {
+      window.clearTimeout(t);
+      remove?.();
+    };
+  }, []);
+}
 
 type IoPatchSaveModalProps = {
   bandId: number;
@@ -12,6 +37,7 @@ type IoPatchSaveModalProps = {
 };
 
 export function IoPatchSaveModal({ bandId, getPatchData, onClose, onSaved, saveError, setSaveError }: IoPatchSaveModalProps) {
+  useModalDismissOnOutside(onClose);
   const [name, setName] = useState('');
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,7 +70,7 @@ export function IoPatchSaveModal({ bandId, getPatchData, onClose, onSaved, saveE
 
   return (
     <>
-      <div className="io-patch-modal-backdrop" onClick={onClose} aria-hidden />
+      <div className="io-patch-modal-backdrop" aria-hidden />
       <div className="io-patch-modal io-patch-modal-dropdown" data-io-patch-popup onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSubmit} className="io-patch-modal-body">
           <label className="io-patch-modal-label">
@@ -87,6 +113,7 @@ type IoPatchLoadModalProps = {
 };
 
 export function IoPatchLoadModal({ bandId, savedPatches, loadError, onClose, onLoad, dateId }: IoPatchLoadModalProps) {
+  useModalDismissOnOutside(onClose);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [bindingId, setBindingId] = useState<number | null>(null);
   const [bindError, setBindError] = useState<string | null>(null);
@@ -129,7 +156,7 @@ export function IoPatchLoadModal({ bandId, savedPatches, loadError, onClose, onL
 
   return (
     <>
-      <div className="io-patch-modal-backdrop" onClick={onClose} aria-hidden />
+      <div className="io-patch-modal-backdrop" aria-hidden />
       <div className="io-patch-modal io-patch-modal-dropdown" data-io-patch-popup onClick={(e) => e.stopPropagation()}>
         <div className="io-patch-modal-body">
           {loadError && <div className="io-patch-modal-error">{loadError}</div>}

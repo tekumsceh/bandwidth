@@ -1,7 +1,6 @@
 /**
- * Resolves instrument icons and wedge/IEM icons from user selection in Testing Ground.
- * Reads localStorage keys: testing-ground-*-selection
- * Falls back to defaults when no selection or key missing.
+ * Resolves instrument icons and wedge/IEM icons from saved local preferences.
+ * Primary keys: `bandwidth-io-*-selection`; legacy `testing-ground-*` still read for migration.
  */
 import type { ReactNode } from 'react';
 import { BehringerIcon } from '../assets/behringer-icons/BehringerIcon';
@@ -48,11 +47,16 @@ import { CiMonitor } from 'react-icons/ci';
 import { BsEarbuds } from 'react-icons/bs';
 import { BsSpeaker, BsHeadphones } from 'react-icons/bs';
 
-const KEY_GAME = 'testing-ground-game-icons-selection';
-const KEY_BEHRINGER = 'testing-ground-behringer-selection';
-const KEY_GUITAR = 'testing-ground-guitar-selection';
-const KEY_WEDGE = 'testing-ground-wedge-selection';
-const KEY_IEM = 'testing-ground-iem-selection';
+const KEY_GAME = 'bandwidth-io-game-icons-selection';
+const KEY_GAME_LEGACY = 'testing-ground-game-icons-selection';
+const KEY_BEHRINGER = 'bandwidth-io-behringer-selection';
+const KEY_BEHRINGER_LEGACY = 'testing-ground-behringer-selection';
+const KEY_GUITAR = 'bandwidth-io-guitar-selection';
+const KEY_GUITAR_LEGACY = 'testing-ground-guitar-selection';
+const KEY_WEDGE = 'bandwidth-io-wedge-selection';
+const KEY_WEDGE_LEGACY = 'testing-ground-wedge-selection';
+const KEY_IEM = 'bandwidth-io-iem-selection';
+const KEY_IEM_LEGACY = 'testing-ground-iem-selection';
 
 type IconSelection = { checked: boolean; label: string };
 
@@ -64,6 +68,10 @@ function load<T>(key: string, parse: (raw: unknown) => T | null): T | null {
   } catch {
     return null;
   }
+}
+
+function loadWithLegacy<T>(primary: string, legacy: string, parse: (raw: unknown) => T | null): T | null {
+  return load(primary, parse) ?? load(legacy, parse);
 }
 
 const Icon = (C: React.ComponentType<{ size?: number }>) => ({ size = 32 }: { size?: number }) => (
@@ -155,9 +163,9 @@ const IEM_ICONS: Record<string, (p: { size?: number }) => ReactNode> = {
 };
 
 export function resolveInstruments(): InstrumentDef[] {
-  const game = load(KEY_GAME, (r) => r as Record<string, IconSelection> | null);
-  const behringer = load(KEY_BEHRINGER, (r) => r as Record<string, IconSelection> | null);
-  const guitar = load(KEY_GUITAR, (r) => r as Record<string, IconSelection> | null);
+  const game = loadWithLegacy(KEY_GAME, KEY_GAME_LEGACY, (r) => r as Record<string, IconSelection> | null);
+  const behringer = loadWithLegacy(KEY_BEHRINGER, KEY_BEHRINGER_LEGACY, (r) => r as Record<string, IconSelection> | null);
+  const guitar = loadWithLegacy(KEY_GUITAR, KEY_GUITAR_LEGACY, (r) => r as Record<string, IconSelection> | null);
 
   const behringerByInst: Record<string, { behId: number; label: string }> = {};
   if (behringer) {
@@ -205,7 +213,7 @@ export function resolveInstruments(): InstrumentDef[] {
 }
 
 export function resolveWedgeIcon(): React.ComponentType<{ size?: number }> {
-  const wedge = load(KEY_WEDGE, (r) => r as Record<string, IconSelection> | null);
+  const wedge = loadWithLegacy(KEY_WEDGE, KEY_WEDGE_LEGACY, (r) => r as Record<string, IconSelection> | null);
   if (wedge) {
     const first = Object.entries(wedge).find(([, v]) => v?.checked);
     if (first) {
@@ -222,7 +230,7 @@ export function resolveWedgeIcon(): React.ComponentType<{ size?: number }> {
 }
 
 export function resolveIemIcon(): React.ComponentType<{ size?: number }> {
-  const iem = load(KEY_IEM, (r) => r as Record<string, IconSelection> | null);
+  const iem = loadWithLegacy(KEY_IEM, KEY_IEM_LEGACY, (r) => r as Record<string, IconSelection> | null);
   if (iem) {
     const first = Object.entries(iem).find(([, v]) => v?.checked);
     if (first) {

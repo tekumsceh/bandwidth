@@ -312,5 +312,33 @@ export async function ensureV2Schema() {
       CONSTRAINT fk_date_io_patch_bindings_save FOREIGN KEY (io_patch_save_id) REFERENCES io_patch_saves(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
   );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS band_songs (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      band_id INT(10) UNSIGNED NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      artist VARCHAR(255) DEFAULT NULL,
+      lyrics LONGTEXT,
+      lyrics_photo_key VARCHAR(512) DEFAULT NULL,
+      created_by_user_id INT(10) UNSIGNED NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+      PRIMARY KEY (id),
+      KEY idx_band_songs_band (band_id),
+      KEY idx_band_songs_title (band_id, title),
+      CONSTRAINT fk_band_songs_band FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE,
+      CONSTRAINT fk_band_songs_user FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  );
+
+  try {
+    await pool.query(`ALTER TABLE band_songs ADD COLUMN lyrics_photo_key VARCHAR(512) DEFAULT NULL`);
+  } catch (err: unknown) {
+    const e = err as { errno?: number; code?: string };
+    if (e.errno !== 1060 && e.code !== 'ER_DUP_FIELDNAME') {
+      throw err;
+    }
+  }
 }
 

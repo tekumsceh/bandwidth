@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ScheduleEvent } from './scheduleTypes';
 import { assetPageHref } from '../config/navigation';
+import { StripFrame } from '../pages/assets/io-patch/StripFrame';
 import '../pages/assets/IOPatchPage.css';
 
 type Props = {
@@ -13,6 +14,30 @@ type Props = {
   /** Done gigs — same dimming as empty strip pads */
   dimmed?: boolean;
 };
+
+type GigAssetStripBtnProps = {
+  disabled: boolean;
+  disabledTitle: string;
+  to: string;
+  linkTitle: string;
+  className: string;
+  label: string;
+};
+
+function GigAssetStripButton({ disabled, disabledTitle, to, linkTitle, className, label }: GigAssetStripBtnProps) {
+  if (disabled) {
+    return (
+      <span className={`${className} io-patch-link-btn--disabled`} title={disabledTitle} aria-disabled="true">
+        {label}
+      </span>
+    );
+  }
+  return (
+    <Link className={className} to={to} title={linkTitle} onClick={(e) => e.stopPropagation()}>
+      {label}
+    </Link>
+  );
+}
 
 function statusDisplay(status: string): { text: string; tone: 'confirmed' | 'pending' | 'postponed' | 'done' | 'other' } {
   const s = status.toLowerCase();
@@ -51,6 +76,8 @@ function ScheduleStripCard({
 
   const bandId = event.band_id;
   const hasAssetLinks = typeof bandId === 'number' && Number.isFinite(bandId);
+  const assetLinksDisabled = dimmed;
+  const assetLinksDisabledTitle = 'Not available — this date is marked done';
 
   const stripBg =
     fullStripBandTint && event.band_color?.trim()
@@ -58,13 +85,14 @@ function ScheduleStripCard({
       : undefined;
 
   return (
-    <div
-      className={`io-patch-strip io-patch-gig-strip${dimmed ? ' skipped' : ''}`}
+    <StripFrame
+      className="date-strip"
+      skipped={dimmed}
       data-description={event.description || ''}
       style={stripBg}
     >
       <div
-        className="io-patch-gig-strip-main"
+        className="date-strip-main"
         role="button"
         tabIndex={0}
         onClick={() => onSelectEvent(event.id)}
@@ -77,37 +105,37 @@ function ScheduleStripCard({
       >
         <div className="io-patch-ch-num-wrap">
           <div
-            className="io-patch-ch-num has-color io-patch-ch-num--display io-patch-gig-date-pill"
+            className="io-patch-ch-num has-color io-patch-ch-num--display date-strip-pill"
             style={{
               borderColor: accent,
               boxShadow: `inset 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 0 8px ${accent}35`,
             }}
           >
-            <span className="io-patch-gig-date-mo">{monthTiny}</span>
-            <span className="io-patch-gig-date-day">{String(dayNum).padStart(2, '0')}</span>
+            <span className="date-strip-mo">{monthTiny}</span>
+            <span className="date-strip-day">{String(dayNum).padStart(2, '0')}</span>
           </div>
         </div>
 
-        <div className={`io-patch-gig-status io-patch-gig-status--${stInfo.tone}`} title={event.status}>
+        <div className={`date-strip-status date-strip-status--${stInfo.tone}`} title={event.status}>
           {stInfo.text}
         </div>
 
-        <div className="io-patch-instrument-name io-patch-gig-field" title={city}>
+        <div className="io-patch-instrument-name date-strip-field" title={city}>
           {city}
         </div>
-        <div className="io-patch-instrument-name io-patch-gig-field" title={venue}>
+        <div className="io-patch-instrument-name date-strip-field" title={venue}>
           {venue}
         </div>
 
         <div className="io-patch-select-wrap">
-          <div className="io-patch-select-btn io-patch-select-btn--readonly io-patch-gig-time-compact io-patch-gig-time-sc">
-            <span className="io-patch-gig-time-tag">SC</span>
+          <div className="io-patch-select-btn io-patch-select-btn--readonly date-strip-time-compact date-strip-time-sc">
+            <span className="date-strip-time-tag">SC</span>
             <span className="io-patch-select-value">{formatTime(event.soundcheck_time)}</span>
           </div>
         </div>
         <div className="io-patch-select-wrap">
-          <div className="io-patch-select-btn io-patch-select-btn--readonly io-patch-gig-time-compact io-patch-gig-time-show">
-            <span className="io-patch-gig-time-tag">ST</span>
+          <div className="io-patch-select-btn io-patch-select-btn--readonly date-strip-time-compact date-strip-time-show">
+            <span className="date-strip-time-tag">ST</span>
             <span className="io-patch-select-value">{formatTime(event.set_time)}</span>
           </div>
         </div>
@@ -115,37 +143,37 @@ function ScheduleStripCard({
 
       {hasAssetLinks ? (
         <div
-          className="io-patch-gig-asset-links"
+          className="date-strip-asset-links"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <Link
-            className="io-patch-link-btn"
+          <GigAssetStripButton
+            disabled={assetLinksDisabled}
+            disabledTitle={assetLinksDisabledTitle}
             to={assetPageHref('setlists', bandId, event.id)}
-            title="Setlist profiles for this band & date"
-            onClick={(e) => e.stopPropagation()}
-          >
-            SET
-          </Link>
-          <Link
+            linkTitle="Setlist profiles for this band & date"
             className="io-patch-link-btn"
+            label="SET"
+          />
+          <GigAssetStripButton
+            disabled={assetLinksDisabled}
+            disabledTitle={assetLinksDisabledTitle}
             to={assetPageHref('gear', bandId, event.id)}
-            title="Gear profiles for this band & date"
-            onClick={(e) => e.stopPropagation()}
-          >
-            GEAR
-          </Link>
-          <Link
-            className="io-patch-link-btn io-patch-link-btn--io"
+            linkTitle="Gear profiles for this band & date"
+            className="io-patch-link-btn"
+            label="GEAR"
+          />
+          <GigAssetStripButton
+            disabled={assetLinksDisabled}
+            disabledTitle={assetLinksDisabledTitle}
             to={assetPageHref('patch', bandId, event.id)}
-            title="I/O patch — default patch for this band, scoped to this date"
-            onClick={(e) => e.stopPropagation()}
-          >
-            I/O
-          </Link>
+            linkTitle="I/O patch — default patch for this band, scoped to this date"
+            className="io-patch-link-btn io-patch-link-btn--io"
+            label="I/O"
+          />
         </div>
       ) : null}
-    </div>
+    </StripFrame>
   );
 }
 

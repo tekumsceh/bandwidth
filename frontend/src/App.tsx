@@ -8,16 +8,16 @@ import VerifyEmail from './pages/VerifyEmail';
 import { APP_ROUTES } from './config/navigation';
 import type { AppBandSummary, CurrentUser } from './types';
 import { AuthenticatedShell } from './shell/AuthenticatedShell';
+import { parseJsonBody, throwHttpError } from './utils/apiJson';
+import { toErrorMessage } from './utils/toErrorMessage';
 
 function App() {
   const [me, setMe] = useState<CurrentUser | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [myBands, setMyBands] = useState<{ id: number; name: string }[]>([]);
-  const [pendingExpensesCount, setPendingExpensesCount] = useState(0);
+  const pendingExpensesCount = 0;
   const [canAccessAdmin, setCanAccessAdmin] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
-  const toErrorMessage = (err: unknown, fallback: string) =>
-    err instanceof Error ? err.message : fallback;
 
   const loadAppContext = useCallback(async () => {
     setIsBootstrapping(true);
@@ -27,39 +27,29 @@ function App() {
       if (meRes.status === 401) {
         setMe(null);
         setMyBands([]);
-        setPendingExpensesCount(0);
         setCanAccessAdmin(false);
         return;
       }
       if (!meRes.ok) {
-        const json = await meRes.json().catch(() => null);
-        throw new Error(json?.error || `Failed to load current user (${meRes.status})`);
+        await throwHttpError(meRes, 'Failed to load current user');
       }
-      const meJson = (await meRes.json()) as CurrentUser;
+      const meJson = await parseJsonBody<CurrentUser>(meRes);
       setMe(meJson);
 
-      const [bandsRes, pendingRes, adminRes] = await Promise.all([
+      const [bandsRes, adminRes] = await Promise.all([
         fetch(apiUrl('/api/bands')),
-        fetch(apiUrl('/api/me/expenses/pending-count')),
         fetch(apiUrl('/api/admin/config/can-access')),
       ]);
 
       if (bandsRes.ok) {
-        const bandsJson = (await bandsRes.json()) as AppBandSummary[];
+        const bandsJson = await parseJsonBody<AppBandSummary[]>(bandsRes);
         setMyBands(bandsJson);
       } else {
         setMyBands([]);
       }
 
-      if (pendingRes.ok) {
-        const pendingJson = (await pendingRes.json()) as { pending_count: number };
-        setPendingExpensesCount(pendingJson.pending_count || 0);
-      } else {
-        setPendingExpensesCount(0);
-      }
-
       if (adminRes.ok) {
-        const adminJson = (await adminRes.json()) as { canAccess: boolean };
+        const adminJson = await parseJsonBody<{ canAccess: boolean }>(adminRes);
         setCanAccessAdmin(Boolean(adminJson.canAccess));
       } else {
         setCanAccessAdmin(false);
@@ -67,7 +57,6 @@ function App() {
     } catch (e: unknown) {
       setMe(null);
       setMyBands([]);
-      setPendingExpensesCount(0);
       setCanAccessAdmin(false);
       setMeError(toErrorMessage(e, 'Failed to load current user'));
     } finally {

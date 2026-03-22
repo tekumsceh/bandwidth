@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { StripFrame } from '../pages/assets/io-patch/StripFrame';
 import '../pages/assets/IOPatchPage.css';
 
 type Props = {
@@ -9,8 +10,8 @@ type Props = {
 /** Last channel: create new date / gig */
 function ScheduleAddStrip({ onAddDate, channelSlot: _channelSlot }: Props) {
   return (
-    <div
-      className="io-patch-strip io-patch-gig-strip io-patch-gig-strip--add"
+    <StripFrame
+      className="date-strip date-strip--add"
       role="button"
       tabIndex={0}
       onClick={onAddDate}
@@ -22,38 +23,38 @@ function ScheduleAddStrip({ onAddDate, channelSlot: _channelSlot }: Props) {
       }}
       aria-label="Add new date"
     >
-      <div className="io-patch-gig-strip-main">
+      <div className="date-strip-main">
         <div className="io-patch-ch-num-wrap">
           <div
-            className="io-patch-ch-num has-color io-patch-ch-num--display io-patch-gig-date-pill--add"
+            className="io-patch-ch-num has-color io-patch-ch-num--display date-strip-pill--add"
             style={{
               borderColor: '#ff8c00',
               boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 0 8px rgba(255, 140, 0, 0.15)',
             }}
           >
-            <Plus size={14} strokeWidth={2.5} className="io-patch-gig-add-icon" aria-hidden />
+            <Plus size={14} strokeWidth={2.5} className="date-strip-add-icon" aria-hidden />
           </div>
         </div>
 
-        <div className="io-patch-gig-status io-patch-gig-status--add">ADD</div>
+        <div className="date-strip-status date-strip-status--add">ADD</div>
 
-        <div className="io-patch-instrument-name io-patch-gig-field">—</div>
-        <div className="io-patch-instrument-name io-patch-gig-field">Schedule</div>
+        <div className="io-patch-instrument-name date-strip-field">—</div>
+        <div className="io-patch-instrument-name date-strip-field">Schedule</div>
 
         <div className="io-patch-select-wrap">
-          <div className="io-patch-select-btn io-patch-select-btn--readonly io-patch-gig-time-compact io-patch-gig-time-sc">
-            <span className="io-patch-gig-time-tag">SC</span>
+          <div className="io-patch-select-btn io-patch-select-btn--readonly date-strip-time-compact date-strip-time-sc">
+            <span className="date-strip-time-tag">SC</span>
             <span className="io-patch-select-value">—</span>
           </div>
         </div>
         <div className="io-patch-select-wrap">
-          <div className="io-patch-select-btn io-patch-select-btn--readonly io-patch-gig-time-compact io-patch-gig-time-show">
-            <span className="io-patch-gig-time-tag">ST</span>
+          <div className="io-patch-select-btn io-patch-select-btn--readonly date-strip-time-compact date-strip-time-show">
+            <span className="date-strip-time-tag">ST</span>
             <span className="io-patch-select-value">—</span>
           </div>
         </div>
       </div>
-    </div>
+    </StripFrame>
   );
 }
 

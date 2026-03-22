@@ -1,0 +1,241 @@
+/* I/O patch — workspace chrome (toolbar, body, action bar, sections).
+ * Depends on :root --strip-width from App.css */
+
+.io-patch-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #e5e7eb;
+  font-family: inherit;
+  padding: 0;
+}
+
+/* Framed workspace inside app shell (same idea as dashboard overview well) */
+.io-patch-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+  background: linear-gradient(180deg, #161616 0%, #101010 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+.io-patch-workspace-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex-shrink: 0;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid #2a2a2a;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.io-patch-workspace-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+}
+
+.io-patch-workspace-hint {
+  font-size: 0.65rem;
+  color: #737373;
+  letter-spacing: 0.04em;
+}
+
+.io-patch-workspace-scope {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #a3a3a3;
+}
+
+.io-patch-workspace-toolbar-spacer {
+  flex: 1;
+  min-width: 0.5rem;
+}
+
+.io-patch-band-select--toolbar {
+  margin-left: 0.15rem;
+}
+
+.io-patch-back--toolbar {
+  font-size: 0.62rem !important;
+  letter-spacing: 0.1em !important;
+  margin: 0 !important;
+}
+
+.io-patch-band-select {
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #f1f5f9;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.io-patch-band-select:focus {
+  outline: none;
+  border-color: #4a4a4a;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.io-patch-back {
+  flex-shrink: 0;
+}
+
+.io-patch-loading {
+  padding: 3rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.io-patch-loading--workspace {
+  padding: 2rem 1rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.io-patch-body {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Stacked layout: patch table below strips, collapsible */
+.io-patch-body.io-patch-body-stacked {
+  flex-direction: column;
+}
+
+.io-patch-body.io-patch-body-stacked .io-patch-content {
+  flex: 0 0 auto;
+}
+
+.io-patch-body.io-patch-body-stacked .io-patch-aside {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  max-height: none;
+}
+
+.io-patch-content {
+  flex: 1;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.io-patch-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.io-patch-action-dropdown-wrap {
+  position: relative;
+  overflow: visible;
+  z-index: 5;
+}
+
+.io-patch-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0.28rem;
+  box-sizing: border-box;
+  background: #1e1e1e;
+  border: 2px solid #3a3a3a;
+  border-radius: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s;
+}
+
+.io-patch-action-btn:hover,
+.io-patch-action-btn.active {
+  background: #252525;
+  border-color: #4a4a4a;
+  color: #e5e7eb;
+}
+
+.io-patch-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.io-patch-lr-toggle {
+  display: flex;
+  gap: 0.25rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.io-patch-lr-btn {
+  flex: 1;
+  min-height: 28px;
+  padding: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 2px solid #3a3a3a;
+  background: linear-gradient(180deg, #252525 0%, #1e1e1e 100%);
+  color: #6b7280;
+  cursor: pointer;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s;
+}
+
+.io-patch-lr-btn:hover {
+  background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
+  border-color: #4a4a4a;
+  color: #9ca3af;
+}
+
+.io-patch-lr-btn.on {
+  background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
+  border-color: #4a4a4a;
+  color: #e5e7eb;
+}
+
+.io-patch-section {
+  margin-bottom: 1.5rem;
+}
+
+.io-patch-section:last-child {
+  margin-bottom: 0;
+}
+
+.io-patch-section-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}

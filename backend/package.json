@@ -6,27 +6,27 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "test": "npm run build && node --test \"tests/*.test.cjs\"",
-    "preflight:prod": "node ./scripts/preflight-prod.mjs",
-    "start": "node dist/index.js",
-    "ensure-admin": "ts-node-dev --transpile-only src/scripts/ensureAdminUser.ts",
-    "cleanup-wrong-admin": "ts-node-dev --transpile-only src/scripts/cleanupWrongAdminUser.ts",
-    "add-admin-to-all-bands": "ts-node-dev --transpile-only src/scripts/addAdminToAllBands.ts"
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "jsdom": "^29.0.1",
+    "multer": "^2.1.1",
     "mysql2": "^3.19.1",
     "nodemailer": "^8.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsdom": "^28.0.1",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.4.0",
     "@types/nodemailer": "^7.0.11",
     "ts-node-dev": "^2.0.0",

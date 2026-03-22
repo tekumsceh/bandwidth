@@ -1,0 +1,47 @@
+/**
+ * Universal strip column — width, flex stack, default border/background/shadow live HERE only.
+ * Do not add separate width utilities; use .strip-frame (via <StripFrame />).
+ *
+ * Context classes compose on top and change only what differs:
+ *   .io-strip     — I/O patch channel (default chrome; popovers may extend outside)
+ *   .date-strip   — dashboard gig row (overflow clip, hover ring, …)
+ *   .money-strip  — reserved for finance
+ *
+ * Override colors via :root tokens (--strip-bg, --strip-border-color, --strip-hover-*, …)
+ * or context selectors, not duplicate layout.
+ */
+
+.strip-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  box-sizing: border-box;
+  width: var(--strip-width);
+  min-width: var(--strip-width);
+  max-width: var(--strip-width);
+  padding: 0.5rem;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--strip-bg);
+  border: 2px solid var(--strip-border-color);
+  box-shadow: var(--strip-inset-shadow);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background-color 0.15s,
+    opacity 0.15s;
+  /* overflow: set per context (.date-strip clips; I/O keeps visible for popovers) */
+}
+
+.strip-frame.skipped {
+  opacity: 0.5;
+}
+
+/* Thin separator between stacked controls inside a strip */
+.strip-divider {
+  height: 4px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  border-radius: 2px;
+  margin: 0.1rem 0;
+}

@@ -4,6 +4,8 @@
 
 See **`docs/roadmap-next.md`** for the current backlog: date interactions & creation, finance rework, gear page, setlists (lyrics + song names in DB), I/O → tech rider (PDF, send to people, hospitality rider). Dashboard & I/O baseline are largely done; iterate from there.
 
+**Setlists:** manager scaffold is at **`/assets/setlists`** (dashboard toolbar **Setlist** icon). Implementation plan: **`docs/setlist-strategy.md`**.
+
 ---
 
 ## Browser DevTools console noise (not the app)

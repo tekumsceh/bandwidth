@@ -19,5 +19,5 @@ export function IemIcon({ size = 16 }: { size?: number }) {
 }
 
 export function StripDivider() {
-  return <div className="io-patch-strip-divider" aria-hidden />;
+  return <div className="strip-divider" aria-hidden />;
 }

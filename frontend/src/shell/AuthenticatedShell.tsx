@@ -4,15 +4,14 @@ import { LogOut, Menu, Music2 } from 'lucide-react';
 import type { AppBandSummary, CurrentUser } from '../types';
 import { displayBandName } from '../utils/bandDisplay';
 import { AppStatusBarProvider } from '../contexts/AppStatusBarContext';
-import { TEMP_PAGES_ENABLED } from '../config/tempMode';
 import {
   APP_ROUTES,
   ACCOUNT_NAV_ITEMS,
   ASSET_NAV_ITEMS,
-  TEMP_LAB_NAV_ITEMS,
   WORK_NAV_ITEMS,
   eventsHubHref,
   eventsHubHrefPreservingQuery,
+  isEventsHubPathname,
 } from '../config/navigation';
 import PrimaryHubNav from '../components/PrimaryHubNav';
 import EventBandRail from '../components/EventBandRail';
@@ -28,9 +27,13 @@ import {
   LazyPatchPage,
   LazySetlistsPage,
   LazySettings,
-  LazyTestingGround,
 } from '../routes/lazyPages';
 import { AppStatusBar } from './AppStatusBar';
+
+function LegacyEventsHubRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: APP_ROUTES.events, search }} replace />;
+}
 
 type Props = {
   me: CurrentUser;
@@ -59,7 +62,10 @@ export function AuthenticatedShell({
 }: Props) {
   const location = useLocation();
   const isIOPatchPage = location.pathname === APP_ROUTES.assetsPatch;
-  const isEventsHub = location.pathname === APP_ROUTES.events;
+  const isEventsHub = isEventsHubPathname(location.pathname);
+  const hubView = (new URLSearchParams(location.search).get('view') || 'dashboard').toLowerCase();
+  /** Same flex + overflow shell as I/O patch — strip console on hub, not Finance. */
+  const isHubStripConsole = isEventsHub && hubView !== 'ledger';
   /** Same band rail as Events hub — also for asset workspaces (gear / setlists / I/O patch). */
   const showBandRail =
     isEventsHub || location.pathname.startsWith('/assets/');
@@ -70,7 +76,8 @@ export function AuthenticatedShell({
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
-  const eventsHome = eventsHubHref('dashboard');
+  /** Default landing after auth — `/` loads the hub without a client redirect. */
+  const eventsHome = APP_ROUTES.home;
 
   return (
     <AppStatusBarProvider>
@@ -81,7 +88,7 @@ export function AuthenticatedShell({
               to={
                 isEventsHub
                   ? eventsHubHrefPreservingQuery('dashboard', location.search)
-                  : eventsHome
+                  : eventsHubHref('dashboard')
               }
               className="app-brand"
             >
@@ -128,7 +135,15 @@ export function AuthenticatedShell({
                     key={item.key}
                     to={item.to}
                     end={item.end}
-                    className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                    className={({ isActive }) => {
+                      if (item.key === 'events') {
+                        const onHub = isEventsHubPathname(location.pathname);
+                        const view = new URLSearchParams(location.search).get('view') || 'dashboard';
+                        const hubEventsActive = onHub && view !== 'ledger';
+                        return hubEventsActive ? 'nav-link active' : 'nav-link';
+                      }
+                      return isActive ? 'nav-link active' : 'nav-link';
+                    }}
                   >
                     {item.label}
                   </NavLink>
@@ -154,20 +169,6 @@ export function AuthenticatedShell({
                     {item.label}
                   </NavLink>
                 ))}
-                {TEMP_PAGES_ENABLED && (
-                  <>
-                    <div className="nav-section-label">Temporary lab</div>
-                    {TEMP_LAB_NAV_ITEMS.map((item) => (
-                      <NavLink
-                        key={item.key}
-                        to={item.to}
-                        className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                      >
-                        {item.label}
-                      </NavLink>
-                    ))}
-                  </>
-                )}
                 {canAccessAdmin && (
                   <NavLink
                     to={APP_ROUTES.adminConfig}
@@ -221,16 +222,17 @@ export function AuthenticatedShell({
               />
             </aside>
           ) : null}
-          <main className={`app-main ${isIOPatchPage ? 'app-main-no-scroll' : ''}`}>
+          <main className={`app-main ${isIOPatchPage || isHubStripConsole ? 'app-main-no-scroll' : ''}`}>
             {meError ? <div className="page-status page-status--inline">{meError}</div> : null}
             <Suspense fallback={<RouteFallback />}>
               <Routes>
-                <Route path={APP_ROUTES.home} element={<Navigate to={eventsHome} replace />} />
+                <Route path={APP_ROUTES.home} element={<LazyDashboard />} />
+                <Route path={APP_ROUTES.events} element={<LazyDashboard />} />
+                <Route path="/events" element={<LegacyEventsHubRedirect />} />
                 <Route path={APP_ROUTES.login} element={<Navigate to={eventsHome} replace />} />
                 <Route path={APP_ROUTES.register} element={<Navigate to={eventsHome} replace />} />
                 <Route path={APP_ROUTES.resetPassword} element={<ResetPassword />} />
                 <Route path={APP_ROUTES.verifyEmail} element={<VerifyEmail />} />
-                <Route path={APP_ROUTES.events} element={<LazyDashboard />} />
                 <Route path={APP_ROUTES.bandDetail} element={<LazyBandDashboard />} />
                 <Route path={APP_ROUTES.createEvent} element={<LazyCreateEvent />} />
                 <Route path={APP_ROUTES.eventDetail} element={<LazyEventDetail />} />
@@ -239,9 +241,6 @@ export function AuthenticatedShell({
                 <Route path={APP_ROUTES.assetsSetlists} element={<LazySetlistsPage />} />
                 <Route path={APP_ROUTES.assetsPatch} element={<LazyPatchPage />} />
                 <Route path={APP_ROUTES.adminConfig} element={<LazyAdminConfig me={me} />} />
-                {TEMP_PAGES_ENABLED && (
-                  <Route path={APP_ROUTES.labTestingGround} element={<LazyTestingGround />} />
-                )}
               </Routes>
             </Suspense>
           </main>

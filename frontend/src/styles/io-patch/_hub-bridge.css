@@ -1,0 +1,35 @@
+/* App shell ↔ I/O patch layout hooks (events hub, dashboard overview).
+ * Loaded with other io-patch rules via IOPatchPage.css */
+
+.page-events-hub .io-patch-page {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Dashboard overview: trail balances toolbar when no Back link. */
+.strip-toolbar-trail-placeholder {
+  flex-shrink: 0;
+  width: 2.85rem;
+  min-height: 1rem;
+}
+
+.io-patch-action-bar .io-patch-action-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.io-patch-content--dashboard-strips {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dashboard-overview-strip-wrap {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: auto;
+}

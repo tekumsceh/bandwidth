@@ -23,7 +23,8 @@ import {
   SelectButton,
   SkipButton,
   WedgeIemSelector,
-} from './io-patch/IoPatchStripControls';
+} from './io-patch/controls';
+import { StripFrame } from './io-patch/StripFrame';
 import './IOPatchPage.css';
 
 export default function IOPatchPage() {
@@ -88,8 +89,19 @@ export default function IOPatchPage() {
                 <button
                   type="button"
                   className={`io-patch-action-btn ${io.saveModalOpen ? 'active' : ''}`}
-                  title="Save"
-                  onClick={() => io.setSaveModalOpen((v) => !v)}
+                  title={
+                    io.loading
+                      ? 'Loading…'
+                      : io.bandId == null
+                        ? 'No band — cannot save'
+                        : 'Save'
+                  }
+                  disabled={io.loading || io.bandId == null}
+                  onClick={() => {
+                    io.setLoadModalOpen(false);
+                    io.setLoadError(null);
+                    io.setSaveModalOpen((v) => !v);
+                  }}
                 >
                   <Folder size={18} strokeWidth={2} />
                 </button>
@@ -108,8 +120,19 @@ export default function IOPatchPage() {
                 <button
                   type="button"
                   className={`io-patch-action-btn ${io.loadModalOpen ? 'active' : ''}`}
-                  title="Load"
-                  onClick={() => io.setLoadModalOpen((v) => !v)}
+                  title={
+                    io.loading
+                      ? 'Loading…'
+                      : io.bandId == null
+                        ? 'No band — cannot load'
+                        : 'Load'
+                  }
+                  disabled={io.loading || io.bandId == null}
+                  onClick={() => {
+                    io.setSaveModalOpen(false);
+                    io.setSaveError(null);
+                    io.setLoadModalOpen((v) => !v);
+                  }}
                 >
                   <Import size={18} strokeWidth={2} />
                 </button>
@@ -124,13 +147,23 @@ export default function IOPatchPage() {
                   />
                 )}
               </div>
-              <button type="button" className="io-patch-action-btn" title="Settings">
+              <button
+                type="button"
+                className="io-patch-action-btn"
+                title="Settings"
+                onClick={() => {
+                  io.setSaveModalOpen(false);
+                  io.setSaveError(null);
+                  io.setLoadModalOpen(false);
+                  io.setLoadError(null);
+                }}
+              >
                 <Settings size={18} strokeWidth={2} />
               </button>
             </div>
             <section className="io-patch-section">
-              <div className="io-patch-strips-row">
-                <div className="io-patch-toolbar">
+              <div className="strip-layout-row">
+                <div className="io-toolbar">
                   <button
                     type="button"
                     className={`io-patch-io-toggle ${io.showOutput ? 'on' : 'off'}`}
@@ -162,14 +195,15 @@ export default function IOPatchPage() {
                     ))}
                   </div>
                 </div>
-                <div className={`io-patch-strips ${io.showOutput ? 'io-patch-strips-output' : 'io-patch-strips-input'}`}>
+                <div className={`strip-row ${io.showOutput ? 'strip-row--output' : 'strip-row--input'}`}>
                 {io.showOutput
                   ? Array.from({ length: io.channelEnd - io.channelStart }, (_, i) => {
                       const ch = io.channelStart + i;
                       return (
-                        <div
+                        <StripFrame
                           key={ch}
-                          className={`io-patch-strip ${io.outputChannelSkips[ch] ? 'skipped' : ''}`}
+                          className="io-strip"
+                          skipped={!!io.outputChannelSkips[ch]}
                           style={io.outputChannelColors[ch] ? { backgroundColor: `color-mix(in srgb, ${io.outputChannelColors[ch]} 22%, #1e1e1e)` } : undefined}
                         >
                           <ChannelNum
@@ -222,15 +256,16 @@ export default function IOPatchPage() {
                             skipped={!!io.outputChannelSkips[ch]}
                             onChange={(v) => io.handleOutputChannelSkip(ch, v)}
                           />
-                        </div>
+                        </StripFrame>
                       );
                     })
                   : Array.from({ length: io.channelEnd - io.channelStart }, (_, i) => {
                       const ch = io.channelStart + i;
                       return (
-                        <div
+                        <StripFrame
                           key={ch}
-                          className={`io-patch-strip ${io.inputChannelSkips[ch] ? 'skipped' : ''}`}
+                          className="io-strip"
+                          skipped={!!io.inputChannelSkips[ch]}
                           style={io.inputChannelColors[ch] ? { backgroundColor: `color-mix(in srgb, ${io.inputChannelColors[ch]} 22%, #1e1e1e)` } : undefined}
                         >
                           <ChannelNum
@@ -291,7 +326,7 @@ export default function IOPatchPage() {
                             skipped={!!io.inputChannelSkips[ch]}
                             onChange={(v) => io.handleInputChannelSkip(ch, v)}
                           />
-                        </div>
+                        </StripFrame>
                       );
                     })}
                 </div>

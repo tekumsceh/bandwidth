@@ -1,10 +1,11 @@
 export const APP_ROUTES = {
   home: '/',
+  /** Events hub (strip overview + finance) — canonical path; `/` also renders the same page */
+  events: '/dashboard',
   login: '/login',
   register: '/register',
   resetPassword: '/reset-password',
   verifyEmail: '/verify-email',
-  events: '/events',
   createEvent: '/events/new',
   eventDetail: '/events/:id',
   bandDetail: '/bands/:id',
@@ -13,18 +14,21 @@ export const APP_ROUTES = {
   assetsPatch: '/assets/patch',
   settings: '/settings',
   adminConfig: '/admin/config',
-  labTestingGround: '/_lab/testing-ground',
 } as const;
 
-/** Events hub query `view=` — Dashboard / Dates / Finance */
+/** Events hub query `view=` — Dashboard (strip overview) / Finance */
 export const EVENTS_VIEW = {
   dashboard: 'dashboard',
-  dates: 'schedule',
   finance: 'ledger',
 } as const;
 
 export const eventsHubHref = (view: keyof typeof EVENTS_VIEW) =>
   `${APP_ROUTES.events}?view=${EVENTS_VIEW[view]}`;
+
+/** True when the URL is the events hub (`/` or `/dashboard`). */
+export function isEventsHubPathname(pathname: string): boolean {
+  return pathname === APP_ROUTES.home || pathname === APP_ROUTES.events;
+}
 
 /** Events hub link while keeping `bandId`, `timeline`, etc. from current URL */
 export function eventsHubHrefPreservingQuery(view: keyof typeof EVENTS_VIEW, currentSearch: string) {
@@ -42,11 +46,12 @@ export type NavItem = {
 };
 
 export const WORK_NAV_ITEMS: readonly NavItem[] = [
-  { key: 'events', label: 'Events', to: eventsHubHref('dashboard'), end: true },
+  /** Hub entry — same screen as `/dashboard`; active state also treats `/dashboard` as home (see shell NavLink). */
+  { key: 'events', label: 'Events', to: APP_ROUTES.home, end: true },
   { key: 'create-event', label: 'New event', to: APP_ROUTES.createEvent },
 ] as const;
 
-/** Top bar: Dashboard / Finance (+ Setup → settings) — Events hub `view=` (schedule via URL/sidebar) */
+/** Top bar: Dashboard / Finance (+ Setup → settings) — Events hub `view=` */
 export const PRIMARY_HUB_NAV: readonly { key: string; label: string; view: 'dashboard' | 'finance' }[] = [
   { key: 'hub-dashboard', label: 'Dashboard', view: 'dashboard' },
   { key: 'hub-finance', label: 'Finance', view: 'finance' },
@@ -84,6 +89,3 @@ export function assetPageHref(
   return `${base}?${q.toString()}`;
 }
 
-export const TEMP_LAB_NAV_ITEMS: readonly NavItem[] = [
-  { key: 'testing-ground', label: 'Testing ground', to: APP_ROUTES.labTestingGround },
-] as const;
