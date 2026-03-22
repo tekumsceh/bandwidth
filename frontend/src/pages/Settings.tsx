@@ -33,9 +33,9 @@ function Settings() {
       setError(null);
       try {
         const res = await fetch(apiUrl('/api/me/preferences/currency'));
-        const json = (await res.json()) as CurrencyPrefPayload;
+        const json = (await res.json()) as CurrencyPrefPayload & { error?: string };
         if (!res.ok) {
-          throw new Error((json as any)?.error || `Failed to load settings (${res.status})`);
+          throw new Error(json.error || `Failed to load settings (${res.status})`);
         }
         setSupported(json.supported_currencies || ['EUR', 'RSD']);
         setDefaultCurrency(json.default_currency || 'EUR');

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { APP_ROUTES } from '../config/navigation';
 import EventsHeaderShell from '../components/EventsHeaderShell';
@@ -37,22 +37,26 @@ function Dashboard() {
     return `${APP_ROUTES.assetsSetlists}?${q.toString()}`;
   }, [bandFilter]);
 
-  const updateQuery = (
-    patch: Partial<Record<'view' | 'timeline' | 'bandId' | 'band' | 'archive', string | null>>,
-  ) => {
-    const next = new URLSearchParams(searchParams);
-    for (const [key, value] of Object.entries(patch)) {
-      if (value === null || value === '') next.delete(key);
-      else next.set(key, value);
-    }
-    setSearchParams(next, { replace: false });
-  };
+  const updateQuery = useCallback(
+    (patch: Partial<Record<'view' | 'timeline' | 'bandId' | 'band' | 'archive', string | null>>) => {
+      const next = new URLSearchParams(searchParams);
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null || value === '') next.delete(key);
+        else next.set(key, value);
+      }
+      setSearchParams(next, { replace: false });
+    },
+    [searchParams, setSearchParams],
+  );
 
-  const setBandFilter = (next: 'all' | number) =>
-    updateQuery({
-      bandId: next === 'all' ? null : String(next),
-      band: null,
-    });
+  const setBandFilter = useCallback(
+    (next: 'all' | number) =>
+      updateQuery({
+        bandId: next === 'all' ? null : String(next),
+        band: null,
+      }),
+    [updateQuery],
+  );
 
   useEffect(() => {
     const normalized = new URLSearchParams(searchParams);
@@ -166,7 +170,7 @@ function Dashboard() {
     if (!stillVisible) {
       setBandFilter('all');
     }
-  }, [bandFilter, timelineBandOptions]);
+  }, [bandFilter, timelineBandOptions, setBandFilter]);
 
   const nextEventLabel = useMemo(() => {
     if (filteredEvents.length === 0) return '—';

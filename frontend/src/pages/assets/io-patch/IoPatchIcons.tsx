@@ -1,3 +1,4 @@
+import { createElement, type ComponentType } from 'react';
 import { FaMicrophone } from 'react-icons/fa';
 import { resolveWedgeIcon, resolveIemIcon } from '../../../config/userIconSelection';
 
@@ -6,16 +7,18 @@ export function MicIcon({ size = 16 }: { size?: number }) {
   return <FaMicrophone size={size} aria-hidden />;
 }
 
+function renderResolvedIcon(Icon: ComponentType<{ size?: number; 'aria-hidden'?: boolean }>, size: number) {
+  return createElement(Icon, { size, 'aria-hidden': true });
+}
+
 /** Wedge monitor - from user selection or default */
 export function WedgeIcon({ size = 16 }: { size?: number }) {
-  const Icon = resolveWedgeIcon();
-  return <Icon size={size} aria-hidden />;
+  return renderResolvedIcon(resolveWedgeIcon(), size);
 }
 
 /** IEM body pack - from user selection or default */
 export function IemIcon({ size = 16 }: { size?: number }) {
-  const Icon = resolveIemIcon();
-  return <Icon size={size} aria-hidden />;
+  return renderResolvedIcon(resolveIemIcon(), size);
 }
 
 export function StripDivider() {

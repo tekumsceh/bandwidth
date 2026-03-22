@@ -19,5 +19,34 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'src/config/userIconSelection.tsx',
+      'src/contexts/AppStatusBarContext.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: [
+      'src/pages/assets/io-patch/controls/InstrumentNameEditable.tsx',
+      'src/pages/assets/io-patch/controls/MicSelector.tsx',
+    ],
+    rules: {
+      // Intentional: reset local editor state when props / open state change.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

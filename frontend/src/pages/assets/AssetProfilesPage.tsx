@@ -19,6 +19,8 @@ type AssetItem = {
   notes: string | null;
 };
 
+type CombinedRow = { label: string; qty?: number; source?: string };
+
 export default function AssetProfilesPage({ moduleKey, title }: Props) {
   const [searchParams] = useSearchParams();
   const initialBandId = Number(searchParams.get('bandId') || NaN);
@@ -31,7 +33,7 @@ export default function AssetProfilesPage({ moduleKey, title }: Props) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [items, setItems] = useState<AssetItem[]>([]);
-  const [combinedRows, setCombinedRows] = useState<any[]>([]);
+  const [combinedRows, setCombinedRows] = useState<CombinedRow[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newProfileName, setNewProfileName] = useState('');
@@ -102,7 +104,7 @@ export default function AssetProfilesPage({ moduleKey, title }: Props) {
       setError(json?.error || 'Failed to load combined');
       return;
     }
-    setCombinedRows(json?.combined || []);
+    setCombinedRows((json?.combined || []) as CombinedRow[]);
   };
 
   useEffect(() => {
@@ -216,7 +218,7 @@ export default function AssetProfilesPage({ moduleKey, title }: Props) {
               <button
                 key={value}
                 className={`tab-button ${tab === value ? 'active' : ''}`}
-                onClick={() => setTab(value as any)}
+                onClick={() => setTab(value as 'personal' | 'band' | 'combined' | 'invoke')}
                 type="button"
               >
                 {label}

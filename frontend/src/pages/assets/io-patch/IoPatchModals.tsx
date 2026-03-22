@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { apiUrl } from '../../../config/api';
 import { isEmptyPatch, type IoPatchPersistedState } from '../ioPatchStorage';
 
 /** Close when clicking outside modal content; keep action bar and other popups reachable in one click. */
 function useModalDismissOnOutside(onClose: () => void) {
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     let remove: (() => void) | undefined;

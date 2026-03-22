@@ -32,10 +32,11 @@ Work in order; check off each segment before moving on.
 - `.gitignore` tightened: `node_modules/`, `dist/`, `.env` / `**/.env`, `backend/uploads/`, `*.log`, `.DS_Store`, `Thumbs.db`.
 - Removed ~1.8k accidentally tracked `backend/node_modules` paths from the index (`git rm -r --cached`); files stay on disk, ignored going forward.
 
-## Segment 8 — Tests / docs smoke baseline
-- Either restore one minimal API test or add `docs/DEV.md` (run backend, frontend, env vars).
-- Optional: restore high-value deleted doc from git history if still relevant.
+## Segment 8 — Tests / docs smoke baseline ✅ DONE
+- `backend/src/app.ts` exports `createApp()` for tests; `index.ts` listens after `ensureV2Schema()`.
+- `backend/tests/api.smoke.test.cjs` — `npm test` (build + Node test runner + supertest): health, `/api/me` + `/api/dates` 401 without session, client log POST.
+- `docs/DEV.md` — run backend/frontend, env note, `npm test` / `npm run build` / `npm run lint`.
 
 ---
 
-**Current segment:** _Segment 8 — Tests / docs smoke baseline_
+**Current segment:** _Next: feature work or expand test coverage as needed_
