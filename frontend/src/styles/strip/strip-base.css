@@ -15,12 +15,12 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.35rem;
+  gap: 0.3rem;
   box-sizing: border-box;
   width: var(--strip-width);
   min-width: var(--strip-width);
   max-width: var(--strip-width);
-  padding: 0.5rem;
+  padding: 0.45rem;
   border-radius: 10px;
   flex-shrink: 0;
   background: var(--strip-bg);

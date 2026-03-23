@@ -1,26 +1,10 @@
 # Reminders
 
-## Next product work (roadmap)
-
-See **`docs/roadmap-next.md`** for the current backlog: date interactions & creation, finance rework, gear page, setlists (lyrics + song names in DB), I/O → tech rider (PDF, send to people, hospitality rider). Dashboard & I/O baseline are largely done; iterate from there.
-
-**Setlists:** manager scaffold is at **`/assets/setlists`** (dashboard toolbar **Setlist** icon). Implementation plan: **`docs/setlist-strategy.md`**.
-
----
-
-## Browser DevTools console noise (not the app)
-
-If you see **`Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received`**, that almost always comes from a **Chrome extension** (async `chrome.runtime` messaging), **not** from this codebase. To confirm: **Incognito** with extensions disabled, or a clean profile. You can’t fix it in app code—disable/update the offending extension or filter the console.
-
 ## Rider creator (I/O patch & assets)
 
 The **I/O patch** (and related gear / setlist flows) are essentially a **rider builder**: engineers use them to define inputs, outputs, and channel assignments that mirror a live console / tour book. Mention this in product copy and UX when it helps users understand the mental model.
 
 **TODO (later):** Lean into “rider” language where appropriate (onboarding, empty states, docs); consider a dedicated rider export or snapshot if the product direction supports it.
-
-## I/O patch mic / stand lists
-
-**TODO (revisit):** Whether to move microphone and stand option lists out of `ioPatchConstants.ts` into JSON and/or DB with caching. Currently kept as code constants; revisit if you need admin edits without deploy or per-tenant lists.
 
 ## Phone layout and behaviour
 
@@ -33,4 +17,4 @@ The **I/O patch** (and related gear / setlist flows) are essentially a **rider b
 
 ## Database structure review
 
-High-level schema notes (redundancy, simplification ideas, what *not* to normalize): **`docs/db-assessment.md`**.
+When you plan schema work, start from **`backend/src/services/schemaService.ts`** (and migrations / SQL alongside it). There is no separate `db-assessment` doc in-repo right now—add notes here or a new doc if you want a written review.

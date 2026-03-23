@@ -5,6 +5,7 @@ export async function ensureV2Schema() {
     `ALTER TABLE users
       ADD COLUMN IF NOT EXISTS default_currency CHAR(3) NOT NULL DEFAULT 'EUR',
       ADD COLUMN IF NOT EXISTS local_currency CHAR(3) NOT NULL DEFAULT 'EUR',
+      ADD COLUMN IF NOT EXISTS full_name VARCHAR(255) DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS email_verified_at DATETIME DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS auth_provider ENUM('google','password','hybrid') NOT NULL DEFAULT 'password'`,

@@ -31,7 +31,8 @@ body,
   --field-text: #f8fafc;
   --field-placeholder: #94a3b8;
   /* Universal strip system — width + default shell (see styles/strip/strip-base.css) */
-  --strip-width: 88px;
+  --strip-width: 103px;
+  --range-strip-width: 76px;
   --strip-bg: #1e1e1e;
   --strip-border-color: #3a3a3a;
   --strip-inset-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.4);

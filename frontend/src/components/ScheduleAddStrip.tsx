@@ -54,6 +54,12 @@ function ScheduleAddStrip({ onAddDate, channelSlot: _channelSlot }: Props) {
           </div>
         </div>
       </div>
+
+      <div className="date-strip-asset-links date-strip-asset-links--ghost" aria-hidden>
+        <span className="io-patch-link-btn">SET</span>
+        <span className="io-patch-link-btn">GEAR</span>
+        <span className="io-patch-link-btn io-patch-link-btn--io">I/O</span>
+      </div>
     </StripFrame>
   );
 }

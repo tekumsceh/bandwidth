@@ -31,6 +31,9 @@ export type IoPatchDataUpdate = {
   outputChannelLR?: Record<number, string>;
 };
 
+/** Server-backed save the editor state came from (for save-as-overwrite and prefilled name). */
+export type ActivePatchSource = { id: number; name: string };
+
 export type UseIoPatchStateOptions = {
   /** `searchParams.get('bandId')` */
   bandIdParam: string | null;
@@ -85,6 +88,7 @@ export function useIoPatchState({ bandIdParam, dateId, isPortrait }: UseIoPatchS
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [savedPatches, setSavedPatches] = useState<{ id: number; name: string; is_default: number; updated_at: string }[]>([]);
+  const [activePatchSource, setActivePatchSource] = useState<ActivePatchSource | null>(null);
   const hasRestoredRef = useRef(false);
   const [patchSwitching, setPatchSwitching] = useState(false);
 
@@ -154,6 +158,7 @@ export function useIoPatchState({ bandIdParam, dateId, isPortrait }: UseIoPatchS
     setPatchSwitching(true);
     let mounted = true;
     (async () => {
+      setActivePatchSource(null);
       const applyEmptyFallback = () => {
         const defaultInput: Record<number, { mic: string; stand: string }> = {};
         for (let i = 0; i < 32; i++) defaultInput[i] = { mic: '—', stand: '—' };
@@ -215,9 +220,12 @@ export function useIoPatchState({ bandIdParam, dateId, isPortrait }: UseIoPatchS
       try {
         const res = await fetch(apiUrl(`/api/assets/patch/${bandId}/default`), { credentials: 'include' });
         if (res.ok && mounted) {
-          const json = (await res.json()) as { data: Record<string, unknown> };
+          const json = (await res.json()) as { id?: number; name?: string; data: Record<string, unknown> };
           if (json.data) {
             applyPatchData(json.data as IoPatchDataUpdate);
+            if (json.id != null && json.name != null) {
+              setActivePatchSource({ id: Number(json.id), name: String(json.name) });
+            }
             if (mounted) {
               hasRestoredRef.current = true;
               setPatchSwitching(false);
@@ -457,20 +465,25 @@ export function useIoPatchState({ bandIdParam, dateId, isPortrait }: UseIoPatchS
     inputChannelLR, outputChannelLR,
   ]);
 
-  useEffect(() => {
+  const refreshSavedPatches = useCallback(() => {
     if (!bandId) return;
     setLoadError(null);
     fetch(apiUrl(`/api/assets/patch/${bandId}`), { credentials: 'include' })
-      .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed to load list')))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load list'))))
       .then((json: { saves?: { id: number; name: string; is_default: number; updated_at: string }[] }) => {
         setSavedPatches(json.saves ?? []);
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : 'Failed to load'));
   }, [bandId]);
 
+  useEffect(() => {
+    refreshSavedPatches();
+  }, [refreshSavedPatches]);
+
   const onLoadSavedPatch = useCallback(
-    (data: IoPatchPersistedState) => {
+    (data: IoPatchPersistedState, source?: ActivePatchSource | null) => {
       applyPatchData(data);
+      if (source) setActivePatchSource(source);
       if (dateId != null) applyDateEntryViewDefaults();
       if (bandId != null) saveIoPatchState(bandId, data, dateId);
       setLoadModalOpen(false);
@@ -515,6 +528,9 @@ export function useIoPatchState({ bandIdParam, dateId, isPortrait }: UseIoPatchS
     loadError,
     setLoadError,
     savedPatches,
+    activePatchSource,
+    setActivePatchSource,
+    refreshSavedPatches,
     patchSwitching,
     // API / persistence
     getPatchData,

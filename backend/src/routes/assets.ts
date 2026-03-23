@@ -5,6 +5,112 @@ import { canEditAssetScope, mergeGearItems, resolveDefaultProfileId } from '../s
 
 const router = Router();
 
+type GearOption = { full: string; short: string };
+
+const DEFAULT_GEAR_OPTIONS: GearOption[] = [
+  { full: 'Fender Telecaster', short: 'Tele' },
+  { full: 'Fender Stratocaster', short: 'Strat' },
+  { full: 'Yamaha Stage Custom Drum Kit', short: 'Drums' },
+  { full: 'Nord Stage Keyboard', short: 'Nord' },
+  { full: 'Shure Vocal Microphone', short: 'Vocal' },
+  { full: 'Ampeg Bass Amplifier', short: 'Bass amp' },
+  { full: '—', short: '—' },
+];
+
+const TECHNICIAN_GEAR_OPTIONS: GearOption[] = [
+  { full: 'Spare Cable Case', short: 'Cables' },
+  { full: 'Measurement Microphone', short: 'Measure' },
+  { full: '—', short: '—' },
+];
+
+const MEMBER_GEAR_PRESETS: Record<string, GearOption[]> = {
+  uki: [
+    { full: 'Yamaha Stage Custom Drum Kit', short: 'Drums' },
+    { full: 'Pearl Reference Drum Kit', short: 'Drums' },
+    { full: 'Paiste 2002 Cymbal Set', short: 'Cymbals' },
+    { full: 'Vic Firth 5A Sticks', short: 'Sticks' },
+    { full: 'Roc-N-Soc Drum Throne', short: 'Throne' },
+    { full: '—', short: '—' },
+  ],
+  pindo: [
+    { full: 'Fender Stratocaster', short: 'Strat' },
+    { full: 'PRS Custom 24', short: 'PRS' },
+    { full: 'Orange Rockerverb Amplifier', short: 'Amp' },
+    { full: 'Guitar Pedalboard', short: 'Pedals' },
+    { full: 'Wireless Guitar Pack', short: 'Wireless' },
+    { full: '—', short: '—' },
+  ],
+  geri: [
+    { full: 'Music Man StingRay Bass', short: 'StingRay' },
+    { full: 'Fender Precision Bass', short: 'P-Bass' },
+    { full: 'Ampeg SVT Bass Amplifier', short: 'Ampeg' },
+    { full: 'Bass Pedalboard', short: 'Pedals' },
+    { full: 'Active DI Box', short: 'DI' },
+    { full: '—', short: '—' },
+  ],
+  marko: [
+    { full: 'Nord Stage 4 Keyboard', short: 'Nord' },
+    { full: 'Shure Vocal Microphone', short: 'Vocal' },
+    { full: 'Percussion Pack', short: 'Perc.' },
+    { full: 'In-Ear Rack', short: 'IEM' },
+    { full: 'Playback Laptop Rig', short: 'Playback' },
+    { full: '—', short: '—' },
+  ],
+  vlasta: [
+    { full: 'Martin D-28 Acoustic Guitar', short: 'Martin' },
+    { full: 'Taylor 714ce Acoustic Guitar', short: 'Taylor' },
+    { full: 'Acoustic DI Box', short: 'DI' },
+    { full: 'Shure Clip Microphone', short: 'Clip' },
+    { full: 'Capo and Strings Kit', short: 'Kit' },
+    { full: '—', short: '—' },
+  ],
+  vlada: [
+    { full: 'Yamaha Trumpet', short: 'Trumpet' },
+    { full: 'Trumpet Clip Microphone', short: 'Clip' },
+    { full: 'Bell Stand', short: 'Stand' },
+    { full: 'Brass Mute Set', short: 'Mutes' },
+    { full: 'Wireless Beltpack', short: 'Wireless' },
+    { full: '—', short: '—' },
+  ],
+  stameni: [
+    { full: 'Clarinet', short: 'Clarinet' },
+    { full: 'Alto Saxophone', short: 'Sax' },
+    { full: 'Dual Clip Microphone Set', short: 'Clip' },
+    { full: 'Reed Kit', short: 'Reeds' },
+    { full: 'Instrument Stand', short: 'Stand' },
+    { full: '—', short: '—' },
+  ],
+  dare: [
+    { full: 'Yamaha Trumpet', short: 'Trumpet' },
+    { full: 'Tenor Trombone', short: 'Trombone' },
+    { full: 'Dual Clip Microphone Set', short: 'Clip' },
+    { full: 'Brass Mute Set', short: 'Mutes' },
+    { full: 'Brass Stand', short: 'Stand' },
+    { full: '—', short: '—' },
+  ],
+  deki: [
+    { full: 'Midas M32 Console', short: 'Console' },
+    { full: 'Midas DL32 Stagebox', short: 'Stagebox' },
+    { full: 'Main Vocal Rack', short: 'Rack' },
+    { full: 'Spare Cable Case', short: 'Cables' },
+    { full: 'Measurement Microphone', short: 'Measure' },
+    { full: '—', short: '—' },
+  ],
+  zdravko: [
+    { full: 'Production Binder', short: 'Binder' },
+    { full: 'Show Laptop', short: 'Laptop' },
+    { full: 'Comms Headset', short: 'Comms' },
+    { full: 'Hospitality Folder', short: 'Hospitality' },
+    { full: 'Transport Pack', short: 'Transport' },
+    { full: '—', short: '—' },
+  ],
+};
+
+function pickMockGearFor(displayName: string): GearOption[] {
+  const key = String(displayName || '').trim().toLowerCase();
+  return MEMBER_GEAR_PRESETS[key] ?? DEFAULT_GEAR_OPTIONS;
+}
+
 async function requireUser(req: Request, res: Response) {
   const user = (req as any).user;
   if (!user) {
@@ -71,6 +177,47 @@ router.get('/hub/:bandId', async (req: Request, res: Response) => {
     // eslint-disable-next-line no-console
     console.error('Hub feed error', err);
     res.status(500).json({ error: 'Failed to load hub feed' });
+  }
+});
+
+router.get('/gear-plan/:bandId', async (req: Request, res: Response) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const bandId = Number(req.params.bandId);
+  if (!Number.isFinite(bandId)) return res.status(400).json({ error: 'Invalid band id' });
+  if (!(await requireBandRead(req, res, bandId, user.id))) return;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         bm.user_id,
+         u.display_name,
+         u.full_name
+       FROM band_members bm
+       JOIN users u ON u.id = bm.user_id
+       WHERE bm.band_id = ?
+         AND bm.status = 'active'
+       ORDER BY bm.role DESC, u.display_name ASC`,
+      [bandId],
+    );
+    const members = (rows as any[]).map((r, idx) => {
+      const memberId = Number(r.user_id);
+      const display = String(r.display_name || '').trim() || `Member ${idx + 1}`;
+      const isCurrentUser = memberId === user.id;
+      const gear = isCurrentUser ? TECHNICIAN_GEAR_OPTIONS : pickMockGearFor(display);
+      return {
+        id: memberId,
+        nick: isCurrentUser ? 'Technician' : display,
+        fullName: String(r.full_name || r.display_name || '').trim() || `Member ${idx + 1}`,
+        avatarColor: ['#334155', '#7c2d12', '#1d4ed8', '#9333ea', '#047857', '#b91c1c', '#0f766e', '#a16207', '#be185d', '#374151'][idx % 10],
+        gearOptions: gear.map((g) => ({ full: g.full, short: g.short })),
+      };
+    });
+    res.json({ members, source: 'mock' });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Gear plan members error', err);
+    res.status(500).json({ error: 'Failed to load gear plan members' });
   }
 });
 
@@ -604,6 +751,49 @@ router.get('/patch/:bandId/:saveId', async (req: Request, res: Response) => {
     // eslint-disable-next-line no-console
     console.error('Get patch save error', err);
     res.status(500).json({ error: 'Failed to get patch' });
+  }
+});
+
+/** Overwrite an existing named save (same band). */
+router.put('/patch/:bandId/:saveId', async (req: Request, res: Response) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const bandId = Number(req.params.bandId);
+  const saveId = Number(req.params.saveId);
+  const name = String(req.body?.name || '').trim() || 'Untitled';
+  const setAsDefault = Boolean(req.body?.setAsDefault);
+  const data = req.body?.data;
+  if (!Number.isFinite(bandId) || !Number.isFinite(saveId)) return res.status(400).json({ error: 'Invalid ids' });
+  if (!(await requireBandRead(req, res, bandId, user.id))) return;
+  if (!data || typeof data !== 'object') return res.status(400).json({ error: 'Invalid patch data' });
+  const manager = await canManageBand(bandId, user.id);
+  const effectiveSetAsDefault = setAsDefault && manager;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT id FROM io_patch_saves WHERE id = ? AND band_id = ? LIMIT 1`,
+      [saveId, bandId],
+    );
+    if (!(rows as any[])[0]) return res.status(404).json({ error: 'Patch not found' });
+
+    const dataJson = JSON.stringify(data);
+    if (effectiveSetAsDefault) {
+      await pool.query(`UPDATE io_patch_saves SET is_default = 0 WHERE band_id = ?`, [bandId]);
+      await pool.query(
+        `UPDATE io_patch_saves SET name = ?, data_json = ?, is_default = 1 WHERE id = ? AND band_id = ?`,
+        [name, dataJson, saveId, bandId],
+      );
+    } else {
+      await pool.query(
+        `UPDATE io_patch_saves SET name = ?, data_json = ? WHERE id = ? AND band_id = ?`,
+        [name, dataJson, saveId, bandId],
+      );
+    }
+    res.json({ ok: true, id: saveId });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Update patch save error', err);
+    res.status(500).json({ error: 'Failed to update patch' });
   }
 });
 

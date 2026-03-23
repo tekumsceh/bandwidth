@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { apiUrl } from '../../config/api';
 import BackNavLink from '../../components/BackNavLink';
 import { Folder, Import, Settings } from 'lucide-react';
 import {
@@ -27,6 +28,19 @@ import {
 import { StripFrame } from './io-patch/StripFrame';
 import './IOPatchPage.css';
 
+/** DD.MM.YYYY from MySQL `event_date` or ISO string without timezone surprises. */
+function formatGigDateLabel(eventDate: unknown): string {
+  if (eventDate == null) return '';
+  const s = String(eventDate);
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  }
+  return s;
+}
+
 export default function IOPatchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const bandIdParam = searchParams.get('bandId');
@@ -46,6 +60,37 @@ export default function IOPatchPage() {
     dateId: dateIdNum,
     isPortrait,
   });
+
+  /** Human-readable gig line for ?dateId= deep links (from GET /api/dates/:id). */
+  const [gigScopeLine, setGigScopeLine] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (dateIdNum == null) {
+      setGigScopeLine(undefined);
+      return;
+    }
+    let cancelled = false;
+    setGigScopeLine(undefined);
+    (async () => {
+      try {
+        const res = await fetch(apiUrl(`/api/dates/${dateIdNum}`), { credentials: 'include' });
+        if (!res.ok) throw new Error('bad status');
+        const row = (await res.json()) as { event_date?: unknown; band_name?: unknown };
+        if (cancelled) return;
+        const dateStr = formatGigDateLabel(row.event_date);
+        const band = String(row.band_name ?? '').trim() || '—';
+        const left = dateStr || '—';
+        setGigScopeLine(`${left}  ${band}`);
+      } catch {
+        if (!cancelled) {
+          setGigScopeLine(`Date #${dateIdNum} · patch for this gig`);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dateIdNum]);
 
   /** Keep ?bandId= in sync with sidebar rail when defaulting to first band. */
   useEffect(() => {
@@ -67,9 +112,9 @@ export default function IOPatchPage() {
         <div className="io-patch-workspace-toolbar" aria-label="I/O patch workspace">
           <span className="io-patch-workspace-label">I/O patch</span>
           <span className="io-patch-workspace-hint">Input / output routing</span>
-          {dateIdParam ? (
-            <span className="io-patch-workspace-scope">
-              Date #{dateIdParam} · patch for this gig
+          {dateIdNum != null ? (
+            <span className="io-patch-workspace-scope" title="Gig for this I/O patch">
+              {gigScopeLine === undefined ? '…' : gigScopeLine}
             </span>
           ) : null}
           <span className="io-patch-workspace-toolbar-spacer" aria-hidden />
@@ -108,9 +153,19 @@ export default function IOPatchPage() {
                 {io.saveModalOpen && io.bandId && (
                   <IoPatchSaveModal
                     bandId={io.bandId}
+                    savedPatches={io.savedPatches}
+                    activePatchSource={io.activePatchSource}
                     getPatchData={io.getPatchData}
-                    onClose={() => { io.setSaveModalOpen(false); io.setSaveError(null); }}
-                    onSaved={() => io.setSaveModalOpen(false)}
+                    onClose={() => {
+                      io.setSaveModalOpen(false);
+                      io.setSaveError(null);
+                    }}
+                    onSaved={(meta) => {
+                      io.setActivePatchSource({ id: meta.id, name: meta.name });
+                      io.setSaveModalOpen(false);
+                      io.setSaveError(null);
+                      io.refreshSavedPatches();
+                    }}
                     saveError={io.saveError}
                     setSaveError={io.setSaveError}
                   />
@@ -141,9 +196,11 @@ export default function IOPatchPage() {
                     bandId={io.bandId}
                     savedPatches={io.savedPatches}
                     loadError={io.loadError}
-                    onClose={() => { io.setLoadModalOpen(false); io.setLoadError(null); }}
+                    onClose={() => {
+                      io.setLoadModalOpen(false);
+                      io.setLoadError(null);
+                    }}
                     onLoad={io.onLoadSavedPatch}
-                    dateId={dateIdNum}
                   />
                 )}
               </div>
